@@ -33,6 +33,9 @@ def TestSaveStageBuffer()
 enddef
 
 def TestOpen3Way()
+    &lines = 50
+    unlet! g:gitu_status_height
+
     var temp_dir = tempname() .. '_gitu_test_3way'
     mkdir(temp_dir, 'p')
 
@@ -47,13 +50,17 @@ def TestOpen3Way()
 
     writefile(['worktree content'], file_path)
 
+    enew
+    var status_winid = win_getid()
+
     var callback_called = false
-    stage.Open3Way(temp_dir, 'test.txt', () => {
+    stage.Open3Way(temp_dir, 'test.txt', status_winid, () => {
         callback_called = true
     })
 
-    # Should have 3 windows in the new tab
-    assert_equal(3, winnr('$'))
+    # Should have 4 windows in total (status on top, 3 panels on bottom)
+    assert_equal(4, winnr('$'))
+    assert_equal(15, winheight(status_winid))
 
     # Active window should be the center STAGE panel
     assert_match('\[GitU:STAGE: test\.txt\]$', bufname('%'))
@@ -68,7 +75,17 @@ def TestOpen3Way()
     # Close 3way
     stage.Close3Way()
     assert_true(callback_called)
+    assert_equal(1, winnr('$'))
+    assert_equal(status_winid, win_getid())
 
+    # Test custom status height
+    g:gitu_status_height = 20
+    stage.Open3Way(temp_dir, 'test.txt', status_winid)
+    assert_equal(20, winheight(status_winid))
+    stage.Close3Way()
+    unlet! g:gitu_status_height
+
+    bwipeout!
     delete(temp_dir, 'rf')
 enddef
 

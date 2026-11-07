@@ -84,8 +84,11 @@ Key Mappings in status buffer:
     q                   Close the status view.
 
 The 3-Way Patch Editor (`pp`):
-When pressing `pp` on a file line, a new tab opens with 3 vertical split panels:
+When pressing `pp` on a file line, the status window splits at the bottom
+with 3 vertical panels:
 
+    +-----------------------------------------------------------+
+    | [GitU:Status] (height: g:gitu_status_height, default: 15) |
     +-------------------+-------------------+-------------------+
     | [GitU:HEAD]       | [GitU:STAGE]      | [CURRENT]         |
     |                   |                   |                   |
@@ -98,8 +101,8 @@ All 3 panels participate in Vim diff mode (`diffthis`).
   from CURRENT using `do` / `diffget` or edit lines directly.
 - Saving the STAGE panel (`:w`) automatically writes the object to Git
   object storage and updates the Git index via `git update-index`.
-- Pressing `q` in any panel exits diff mode and closes the tab, returning
-  to the status buffer with automatic refresh.
+- Pressing `q` in any panel exits diff mode and closes the bottom panels,
+  returning to the status buffer with automatic refresh.
 
 ==============================================================================
 5. PANES AND KEYMAPS                                            *gitu-keymaps*
@@ -138,6 +141,12 @@ In the [GitU:Commit] pane:
 
 g:gitu_commit_height                                    *g:gitu_commit_height*
     Height (in rows) of the top-right commit detail pane in the :GitULog view.
+    Set to 0 or negative to disable resizing and preserve equal splits.
+    Default: 15
+
+g:gitu_status_height                                    *g:gitu_status_height*
+    Height (in rows) of the status window when split with diff or 3-way
+    patch panels.
     Set to 0 or negative to disable resizing and preserve equal splits.
     Default: 15
 

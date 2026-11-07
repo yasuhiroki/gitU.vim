@@ -330,7 +330,14 @@ export def OpenPatchEdit()
         return
     endif
 
-    stage.Open3Way(state.cwd, entry.file, () => {
+    var diff_winid = get(state, 'diff_winid', -1)
+    if diff_winid > 0 && win_id2win(diff_winid) > 0
+        win_execute(diff_winid, 'close!')
+    endif
+    state.diff_winid = -1
+    state.diff_bufnr = -1
+
+    stage.Open3Way(state.cwd, entry.file, state.winid, () => {
         Refresh()
     })
 enddef
@@ -348,11 +355,15 @@ export def OpenDiff()
         return
     endif
 
+    stage.Close3Way()
+
+    var status_height: number = get(g:, 'gitu_status_height', 15)
+
     var diff_winid: number = get(state, 'diff_winid', -1)
     if diff_winid > 0 && win_id2win(diff_winid) > 0
         win_gotoid(diff_winid)
     else
-        rightbelow new
+        botright new
         diff_winid = win_getid()
         state.diff_winid = diff_winid
     endif
@@ -361,6 +372,11 @@ export def OpenDiff()
     state.diff_bufnr = diff_bufnr
     nnoremap <buffer> <silent> q <cmd>close<CR>
     buffer.SetLines(diff_bufnr, ['Loading diff...'])
+
+    if status_height > 0 && state.winid > 0 && win_id2win(state.winid) > 0
+        setwinvar(state.winid, '&winfixheight', 1)
+        win_execute(state.winid, 'resize ' .. string(status_height))
+    endif
 
     var args: list<string> = BuildDiffArgs(entry.section, entry.file)
     git.Run(args, {
@@ -383,6 +399,10 @@ export def OpenDiff()
             if cur_state.diff_winid > 0 && win_id2win(cur_state.diff_winid) > 0
                 win_execute(cur_state.diff_winid, 'normal! gg0')
             endif
+            if status_height > 0 && cur_state.winid > 0 && win_id2win(cur_state.winid) > 0
+                setwinvar(cur_state.winid, '&winfixheight', 1)
+                win_execute(cur_state.winid, 'resize ' .. string(status_height))
+            endif
         },
     })
 enddef
@@ -391,6 +411,12 @@ export def OnBufWipeout()
     var view_id: number = GetCurrentViewId()
     var key: string = GetViewKey(view_id)
     if has_key(views, key)
+        var state = views[key]
+        var diff_winid = get(state, 'diff_winid', -1)
+        if diff_winid > 0 && win_id2win(diff_winid) > 0
+            win_execute(diff_winid, 'close!')
+        endif
+        stage.Close3Way()
         git.StopByKey('gitu_status_' .. key)
         git.StopByKey('gitu_status_action_' .. key)
         git.StopByKey('gitu_status_diff_' .. key)

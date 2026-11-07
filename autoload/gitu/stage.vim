@@ -2,6 +2,8 @@ vim9script
 
 import autoload 'gitu/buffer.vim'
 
+var current_session: dict<any> = {}
+
 def GetIndexMode(repo_root: string, rel_file_path: string): string
     var out: string = system('git -C ' .. fnameescape(repo_root) .. ' ls-files --stage -- ' .. fnameescape(rel_file_path))
     if v:shell_error == 0 && out != ''
@@ -53,20 +55,30 @@ export def OnBufWrite()
 enddef
 
 export def Close3Way()
-    diffoff!
-    var Callback: any = get(t:, 'gitu_on_close', null)
-    if tabpagenr('$') > 1
-        tabclose
-    else
-        silent! only
-        enew
+    if empty(current_session)
+        return
     endif
-    if type(Callback) == v:t_func
-        Callback()
+    var session = current_session
+    current_session = {}
+
+    diffoff!
+
+    for wid in [session.head_winid, session.stage_winid, session.current_winid]
+        if wid > 0 && win_id2win(wid) > 0
+            win_execute(wid, 'close!')
+        endif
+    endfor
+
+    if session.status_winid > 0 && win_id2win(session.status_winid) > 0
+        win_gotoid(session.status_winid)
+    endif
+
+    if type(session.OnClose) == v:t_func
+        session.OnClose()
     endif
 enddef
 
-export def Open3Way(repo_root: string, rel_file_path: string, OnClose: any = null)
+export def Open3Way(repo_root: string, rel_file_path: string, status_winid: number = -1, OnClose: any = null)
     var full_path: string = repo_root .. '/' .. rel_file_path
     if !filereadable(full_path)
         echohl ErrorMsg
@@ -74,6 +86,8 @@ export def Open3Way(repo_root: string, rel_file_path: string, OnClose: any = nul
         echohl None
         return
     endif
+
+    Close3Way()
 
     var head_out: string = system('git -C ' .. fnameescape(repo_root) .. ' show HEAD:' .. fnameescape(rel_file_path))
     var head_lines: list<string> = (v:shell_error == 0) ? split(head_out, "\n", 1) : ['']
@@ -87,10 +101,15 @@ export def Open3Way(repo_root: string, rel_file_path: string, OnClose: any = nul
         stage_lines = ['']
     endif
 
-    tabnew
-    t:gitu_on_close = OnClose
+    var status_height: number = get(g:, 'gitu_status_height', 15)
+    if status_height > 0 && status_winid > 0 && win_id2win(status_winid) > 0
+        setwinvar(status_winid, '&winfixheight', 1)
+        win_execute(status_winid, 'resize ' .. string(status_height))
+    endif
 
     # Panel 1 (Left): HEAD
+    botright new
+    var head_winid: number = win_getid()
     var head_bufnr: number = buffer.InitCurrentScratch('gitu-stage-head', '[GitU:HEAD: ' .. rel_file_path .. ']')
     buffer.SetLines(head_bufnr, head_lines)
     setlocal nomodifiable
@@ -122,9 +141,23 @@ export def Open3Way(repo_root: string, rel_file_path: string, OnClose: any = nul
 
     # Panel 3 (Right): CURRENT (Worktree file)
     rightbelow vnew
+    var current_winid: number = win_getid()
     execute 'edit ' .. fnameescape(full_path)
     diffthis
     nnoremap <buffer> <silent> q <ScriptCmd>Close3Way()<CR>
+
+    if status_height > 0 && status_winid > 0 && win_id2win(status_winid) > 0
+        setwinvar(status_winid, '&winfixheight', 1)
+        win_execute(status_winid, 'resize ' .. string(status_height))
+    endif
+
+    current_session = {
+        status_winid: status_winid,
+        head_winid: head_winid,
+        stage_winid: stage_winid,
+        current_winid: current_winid,
+        OnClose: OnClose,
+    }
 
     # Focus Center (STAGE) panel
     win_gotoid(stage_winid)
