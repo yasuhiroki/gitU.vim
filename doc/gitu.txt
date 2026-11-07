@@ -123,6 +123,8 @@ The :GitULog view consists of three synchronized panes:
 Key Mappings in :GitULog:
     q                   Close the GitU view and cancel background jobs.
     u                   Update / refresh the current view.
+    go                  Open the commit on GitHub in the web browser.
+    gp                  Open the pull request containing the commit on GitHub.
     <Tab>               Cycle focus forward across panes.
     <S-Tab>             Cycle focus backward across panes.
 

@@ -15,6 +15,16 @@ def TestLogKeymaps()
     assert_false(empty(map_yy))
     assert_match('log\.YankCommitHash()', map_yy.rhs)
     assert_equal(1, map_yy.buffer)
+
+    var map_go = maparg('go', 'n', false, true)
+    assert_false(empty(map_go))
+    assert_match('log\.OpenCommitWeb()', map_go.rhs)
+    assert_equal(1, map_go.buffer)
+
+    var map_gp = maparg('gp', 'n', false, true)
+    assert_false(empty(map_gp))
+    assert_match('log\.OpenPullRequestWeb()', map_gp.rhs)
+    assert_equal(1, map_gp.buffer)
     bwipeout!
 enddef
 
@@ -26,6 +36,16 @@ def TestCommitKeymaps()
     assert_false(empty(map_u))
     assert_match('log\.Refresh()', map_u.rhs)
     assert_equal(1, map_u.buffer)
+
+    var map_c_go = maparg('go', 'n', false, true)
+    assert_false(empty(map_c_go))
+    assert_match('log\.OpenCommitWeb()', map_c_go.rhs)
+    assert_equal(1, map_c_go.buffer)
+
+    var map_c_gp = maparg('gp', 'n', false, true)
+    assert_false(empty(map_c_gp))
+    assert_match('log\.OpenPullRequestWeb()', map_c_gp.rhs)
+    assert_equal(1, map_c_gp.buffer)
     bwipeout!
 enddef
 

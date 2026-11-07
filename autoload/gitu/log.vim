@@ -2,6 +2,7 @@ vim9script
 
 import autoload 'gitu/buffer.vim'
 import autoload 'gitu/git.vim'
+import autoload 'gitu/github.vim'
 
 var next_view_id: number = 0
 var views: dict<dict<any>> = {}
@@ -359,6 +360,40 @@ export def YankCommitHash(line_str: string = ''): string
 
     echomsg 'Copied ' .. hash
     return hash
+enddef
+
+export def OpenCommitWeb()
+    var view_id: number = GetCurrentViewId()
+    var key: string = GetViewKey(view_id)
+    var hash: string = ExtractCommitHash(getline('.'))
+    if hash == '' && has_key(views, key)
+        hash = views[key].current_hash
+    endif
+    if hash == ''
+        echohl WarningMsg
+        echomsg 'No commit found for current line'
+        echohl None
+        return
+    endif
+    var cwd: string = has_key(views, key) ? views[key].cwd : getcwd()
+    github.OpenCommit(cwd, hash)
+enddef
+
+export def OpenPullRequestWeb()
+    var view_id: number = GetCurrentViewId()
+    var key: string = GetViewKey(view_id)
+    var hash: string = ExtractCommitHash(getline('.'))
+    if hash == '' && has_key(views, key)
+        hash = views[key].current_hash
+    endif
+    if hash == ''
+        echohl WarningMsg
+        echomsg 'No commit found for current line'
+        echohl None
+        return
+    endif
+    var cwd: string = has_key(views, key) ? views[key].cwd : getcwd()
+    github.OpenPullRequest(cwd, hash)
 enddef
 
 export def OnBufWipeout()

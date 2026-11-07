@@ -37,6 +37,8 @@ A Vim plugin for Git operations, written in Vim9 script.
 - `q`: Close the GitU view and cancel background jobs
 - `u`: Update / refresh the view
 - `yy` (in log pane): Copy commit hash of the current line
+- `go`: Open the commit on GitHub in the web browser
+- `gp`: Open the pull request containing the commit on GitHub in the web browser
 - `<Tab>` / `<S-Tab>`: Cycle focus across panes
 - `<CR>` (in log pane): Inspect commit under cursor
 - `<CR>` (in commit pane): Jump to diff of the selected file
