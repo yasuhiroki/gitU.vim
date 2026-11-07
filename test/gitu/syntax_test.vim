@@ -35,10 +35,22 @@ def TestSyntaxCommit()
     bwipeout!
 enddef
 
+def TestSyntaxStatus()
+    enew
+    setlocal filetype=gitu-status
+    runtime syntax/gitu-status.vim
+    assert_equal('gitu-status', &filetype)
+    assert_equal('gitu-status', b:current_syntax)
+    assert_true(hlID('GitUStatusHeaderStaged') > 0)
+    assert_true(hlID('GitUStatusSymbolAdded') > 0)
+    bwipeout!
+enddef
+
 def RunAll()
     TestSyntaxDiff()
     TestSyntaxLog()
     TestSyntaxCommit()
+    TestSyntaxStatus()
 
     var errors = v:errors
     if len(errors) > 0

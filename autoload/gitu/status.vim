@@ -1,0 +1,343 @@
+vim9script
+
+import autoload 'gitu/buffer.vim'
+import autoload 'gitu/git.vim'
+import autoload 'gitu/stage.vim'
+
+var next_view_id: number = 0
+var views: dict<dict<any>> = {}
+
+def GetViewKey(view_id: number): string
+    return string(view_id)
+enddef
+
+def GetCurrentViewId(): number
+    if exists('b:gitu_view_id')
+        return b:gitu_view_id
+    endif
+    if exists('t:gitu_view_id')
+        return t:gitu_view_id
+    endif
+    return -1
+enddef
+
+export def ParsePorcelain(lines: list<string>): dict<any>
+    var result: dict<any> = {
+        branch: '',
+        staged: [],
+        unstaged: [],
+        untracked: [],
+    }
+
+    for line in lines
+        if line =~ '^## '
+            var branch_info: string = line[3 :]
+            result.branch = branch_info
+            continue
+        endif
+
+        if len(line) < 4
+            continue
+        endif
+
+        var x: string = line[0]
+        var y: string = line[1]
+        var filepath: string = line[3 :]
+
+        if x == '?' && y == '?'
+            add(result.untracked, { status: '?', file: filepath })
+            continue
+        endif
+
+        if x != ' ' && x != '?'
+            var staged_file: string = filepath
+            if (x == 'R' || x == 'C') && filepath =~ ' -> '
+                var parts: list<string> = split(filepath, ' -> ')
+                if len(parts) >= 2
+                    staged_file = parts[1]
+                endif
+            endif
+            add(result.staged, { status: x, file: staged_file, raw_file: filepath })
+        endif
+
+        if y != ' ' && y != '?'
+            add(result.unstaged, { status: y, file: filepath })
+        endif
+    endfor
+
+    return result
+enddef
+
+export def RenderStatus(parsed: dict<any>): dict<any>
+    var lines: list<string> = []
+    var line_map: dict<dict<any>> = {}
+
+    if parsed.branch != ''
+        add(lines, 'Branch: ' .. parsed.branch)
+        add(lines, '')
+    endif
+
+    var has_changes: bool = false
+
+    if len(parsed.staged) > 0
+        has_changes = true
+        add(lines, 'Changes to be committed:')
+        for item in parsed.staged
+            var disp_file: string = get(item, 'raw_file', item.file)
+            var line_text: string = printf('  %s  %s', item.status, disp_file)
+            add(lines, line_text)
+            var lnum: number = len(lines)
+            line_map[string(lnum)] = {
+                section: 'staged',
+                status: item.status,
+                file: item.file,
+            }
+        endfor
+        add(lines, '')
+    endif
+
+    if len(parsed.unstaged) > 0
+        has_changes = true
+        add(lines, 'Changes not staged for commit:')
+        for item in parsed.unstaged
+            var line_text: string = printf('  %s  %s', item.status, item.file)
+            add(lines, line_text)
+            var lnum: number = len(lines)
+            line_map[string(lnum)] = {
+                section: 'unstaged',
+                status: item.status,
+                file: item.file,
+            }
+        endfor
+        add(lines, '')
+    endif
+
+    if len(parsed.untracked) > 0
+        has_changes = true
+        add(lines, 'Untracked files:')
+        for item in parsed.untracked
+            var line_text: string = printf('  ?  %s', item.file)
+            add(lines, line_text)
+            var lnum: number = len(lines)
+            line_map[string(lnum)] = {
+                section: 'untracked',
+                status: '?',
+                file: item.file,
+            }
+        endfor
+        add(lines, '')
+    endif
+
+    if !has_changes
+        add(lines, 'nothing to commit, working tree clean')
+    endif
+
+    return { lines: lines, line_map: line_map }
+enddef
+
+def LoadStatus(view_id: number)
+    var key: string = GetViewKey(view_id)
+    if !has_key(views, key)
+        return
+    endif
+    var state = views[key]
+
+    git.Run(['status', '--porcelain=v1', '-u', '--branch'], {
+        cwd: state.cwd,
+        task_key: 'gitu_status_' .. key,
+        on_exit: (res: dict<any>) => {
+            if !has_key(views, key)
+                return
+            endif
+            var cur_state = views[key]
+            if res.status != 0
+                var err_lines: list<string> = empty(res.stderr) ? ['Failed to run git status.'] : res.stderr
+                buffer.SetLines(cur_state.bufnr, err_lines)
+                return
+            endif
+
+            var parsed = ParsePorcelain(res.stdout)
+            var rendered = RenderStatus(parsed)
+            cur_state.line_map = rendered.line_map
+
+            var cur_lnum: number = (cur_state.winid > 0 && win_id2win(cur_state.winid) > 0)
+                ? getcurpos(cur_state.winid)[1]
+                : 1
+
+            buffer.SetLines(cur_state.bufnr, rendered.lines)
+
+            if cur_state.winid > 0 && win_id2win(cur_state.winid) > 0
+                win_execute(cur_state.winid, 'normal! ' .. string(cur_lnum) .. 'G')
+            endif
+        },
+    })
+enddef
+
+export def Open()
+    var buf_dir: string = expand('%:p:h')
+    var initial_cwd: string = (buf_dir != '' && isdirectory(buf_dir)) ? buf_dir : getcwd()
+
+    next_view_id += 1
+    var view_id: number = next_view_id
+    var key: string = GetViewKey(view_id)
+
+    tabnew
+    t:gitu_view_id = view_id
+
+    var winid: number = win_getid()
+    var bufnr: number = buffer.InitCurrentScratch('gitu-status', '[GitU:Status #' .. key .. ']')
+    b:gitu_view_id = view_id
+
+    views[key] = {
+        id: view_id,
+        cwd: initial_cwd,
+        bufnr: bufnr,
+        winid: winid,
+        line_map: {},
+    }
+
+    buffer.SetLines(bufnr, ['Loading git status...'])
+
+    git.ResolveRepoRoot(initial_cwd, (root: string, stderr: list<string>) => {
+        if !has_key(views, key)
+            return
+        endif
+        if root == ''
+            var msg: list<string> = empty(stderr) ? ['Not a git repository.'] : stderr
+            buffer.SetLines(views[key].bufnr, msg)
+            return
+        endif
+        views[key].cwd = root
+        LoadStatus(view_id)
+    })
+enddef
+
+export def Refresh()
+    var view_id: number = GetCurrentViewId()
+    var key: string = GetViewKey(view_id)
+    if !has_key(views, key)
+        return
+    endif
+    LoadStatus(view_id)
+enddef
+
+export def StageCurrent()
+    var view_id: number = GetCurrentViewId()
+    var key: string = GetViewKey(view_id)
+    if !has_key(views, key)
+        return
+    endif
+    var state = views[key]
+    var lnum: number = line('.')
+    var entry: dict<any> = get(state.line_map, string(lnum), {})
+    if empty(entry) || get(entry, 'file', '') == ''
+        return
+    endif
+
+    if entry.section == 'staged'
+        return
+    endif
+
+    git.Run(['add', '--', entry.file], {
+        cwd: state.cwd,
+        task_key: 'gitu_status_action_' .. key,
+        on_exit: (res: dict<any>) => {
+            if !has_key(views, key)
+                return
+            endif
+            if res.status != 0
+                echohl ErrorMsg
+                echomsg 'Failed to stage ' .. entry.file .. ': ' .. join(res.stderr, ' ')
+                echohl None
+                return
+            endif
+            Refresh()
+        },
+    })
+enddef
+
+export def UnstageCurrent()
+    var view_id: number = GetCurrentViewId()
+    var key: string = GetViewKey(view_id)
+    if !has_key(views, key)
+        return
+    endif
+    var state = views[key]
+    var lnum: number = line('.')
+    var entry: dict<any> = get(state.line_map, string(lnum), {})
+    if empty(entry) || get(entry, 'file', '') == ''
+        return
+    endif
+
+    if entry.section != 'staged'
+        return
+    endif
+
+    git.Run(['restore', '--staged', '--', entry.file], {
+        cwd: state.cwd,
+        task_key: 'gitu_status_action_' .. key,
+        on_exit: (res: dict<any>) => {
+            if !has_key(views, key)
+                return
+            endif
+            if res.status != 0
+                git.Run(['reset', 'HEAD', '--', entry.file], {
+                    cwd: state.cwd,
+                    task_key: 'gitu_status_action_' .. key,
+                    on_exit: (res2: dict<any>) => {
+                        if !has_key(views, key)
+                            return
+                        endif
+                        if res2.status != 0
+                            echohl ErrorMsg
+                            echomsg 'Failed to unstage ' .. entry.file .. ': ' .. join(res2.stderr, ' ')
+                            echohl None
+                            return
+                        endif
+                        Refresh()
+                    },
+                })
+                return
+            endif
+            Refresh()
+        },
+    })
+enddef
+
+export def OpenPatchEdit()
+    var view_id: number = GetCurrentViewId()
+    var key: string = GetViewKey(view_id)
+    if !has_key(views, key)
+        return
+    endif
+    var state = views[key]
+    var lnum: number = line('.')
+    var entry: dict<any> = get(state.line_map, string(lnum), {})
+    if empty(entry) || get(entry, 'file', '') == ''
+        return
+    endif
+
+    stage.Open3Way(state.cwd, entry.file, () => {
+        Refresh()
+    })
+enddef
+
+export def OnBufWipeout()
+    var view_id: number = GetCurrentViewId()
+    var key: string = GetViewKey(view_id)
+    if has_key(views, key)
+        git.StopByKey('gitu_status_' .. key)
+        git.StopByKey('gitu_status_action_' .. key)
+        remove(views, key)
+    endif
+enddef
+
+export def Close()
+    OnBufWipeout()
+    if tabpagenr('$') > 1
+        tabclose
+    else
+        silent! only
+        enew
+    endif
+enddef

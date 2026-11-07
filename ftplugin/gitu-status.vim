@@ -1,0 +1,28 @@
+vim9script
+
+if exists('b:did_ftplugin')
+    finish
+endif
+b:did_ftplugin = 1
+
+import autoload 'gitu/status.vim'
+
+setlocal nowrap
+setlocal cursorline
+setlocal nonumber
+setlocal norelativenumber
+setlocal signcolumn=no
+setlocal foldcolumn=0
+setlocal nospell
+setlocal nobuflisted
+
+nnoremap <buffer> <silent> q <ScriptCmd>status.Close()<CR>
+nnoremap <buffer> <silent> u <ScriptCmd>status.Refresh()<CR>
+nnoremap <buffer> <silent> >> <ScriptCmd>status.StageCurrent()<CR>
+nnoremap <buffer> <silent> << <ScriptCmd>status.UnstageCurrent()<CR>
+nnoremap <buffer> <silent> pp <ScriptCmd>status.OpenPatchEdit()<CR>
+
+augroup GitUStatusBuffer
+    autocmd! * <buffer>
+    autocmd BufWipeout <buffer> status.OnBufWipeout()
+augroup END

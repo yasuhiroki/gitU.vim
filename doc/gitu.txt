@@ -9,22 +9,26 @@ CONTENTS                                                       *gitu-contents*
     1. Overview ............................................... |gitu-overview|
     2. Installation ........................................... |gitu-installation|
     3. Commands ............................................... |gitu-commands|
-    4. Panes and Keymaps ...................................... |gitu-keymaps|
-    5. Options ................................................ |gitu-options|
-    6. Highlights ............................................. |gitu-highlights|
-    7. Filetypes .............................................. |gitu-filetypes|
+    4. Status and 3-Way Staging ............................... |gitu-status|
+    5. Panes and Keymaps ...................................... |gitu-keymaps|
+    6. Options ................................................ |gitu-options|
+    7. Highlights ............................................. |gitu-highlights|
+    8. Filetypes .............................................. |gitu-filetypes|
 
 ==============================================================================
 1. OVERVIEW                                                    *gitu-overview*
 
 gitU.vim is an interactive Git plugin for Vim, written in Vim9 script.
 It is inspired by graphical Git viewers such as gitk and tig, providing a
-responsive, multi-pane commit inspection interface directly inside Vim.
+responsive, multi-pane commit inspection interface and status staging directly
+inside Vim.
 
 Key Features:
 - 3-pane interactive Git log viewer (:GitULog).
+- Interactive Git status view (:GitUStatus / :GitU) with instant staging
+  (`>>`), unstaging (`<<`), and 3-way vertical patch editing (`pp`).
+- 3-way patch editor (HEAD | STAGE | CURRENT) directly editing the Git index.
 - Asynchronous execution via Vim9 jobs to keep the editor responsive.
-- Synchronized cursor navigation across log, commit details, and diff.
 - Buffer-local keymaps and dedicated filetypes with syntax highlighting.
 
 Requirements:
@@ -58,8 +62,45 @@ Vim 8/9 packages: >
         :GitULog -n 50
 <   Command completion is available for common Git options.
 
+:GitUStatus                                                      *:GitUStatus*
+:GitU                                                                  *:GitU*
+    Opens the interactive Git status viewer in a new tab page.
+
 ==============================================================================
-4. PANES AND KEYMAPS                                            *gitu-keymaps*
+4. STATUS AND 3-WAY STAGING                                      *gitu-status*
+
+In the :GitUStatus view, files are grouped into sections:
+    - Changes to be committed (staged)
+    - Changes not staged for commit (unstaged)
+    - Untracked files
+
+Key Mappings in status buffer:
+    >>                  Stage the file under cursor (`git add`).
+    <<                  Unstage the file under cursor (`git restore --staged`).
+    pp                  Open 3-way vertical patch editor (`git add -p`).
+    u                   Update / refresh the status view.
+    q                   Close the status view.
+
+The 3-Way Patch Editor (`pp`):
+When pressing `pp` on a file line, a new tab opens with 3 vertical split panels:
+
+    +-------------------+-------------------+-------------------+
+    | [GitU:HEAD]       | [GitU:STAGE]      | [CURRENT]         |
+    |                   |                   |                   |
+    | Commit HEAD       | Git Index         | Worktree file     |
+    | (read-only)       | (editable staging)| (read/write)      |
+    +-------------------+-------------------+-------------------+
+
+All 3 panels participate in Vim diff mode (`diffthis`).
+- Center panel ([GitU:STAGE]) represents the Git index. You can pull changes
+  from CURRENT using `do` / `diffget` or edit lines directly.
+- Saving the STAGE panel (`:w`) automatically writes the object to Git
+  object storage and updates the Git index via `git update-index`.
+- Pressing `q` in any panel exits diff mode and closes the tab, returning
+  to the status buffer with automatic refresh.
+
+==============================================================================
+5. PANES AND KEYMAPS                                            *gitu-keymaps*
 
 The :GitULog view consists of three synchronized panes:
 
@@ -73,7 +114,7 @@ The :GitULog view consists of three synchronized panes:
     |                   | selected changed file             |
     +-------------------+-----------------------------------+
 
-Key Mappings (Buffer-local):
+Key Mappings in :GitULog:
     q                   Close the GitU view and cancel background jobs.
     u                   Update / refresh the current view.
     <Tab>               Cycle focus forward across panes.
@@ -91,7 +132,7 @@ In the [GitU:Commit] pane:
                         selected file under the cursor.
 
 ==============================================================================
-5. OPTIONS                                                     *gitu-options*
+6. OPTIONS                                                     *gitu-options*
 
 g:gitu_commit_height                                    *g:gitu_commit_height*
     Height (in rows) of the top-right commit detail pane in the :GitULog view.
@@ -99,7 +140,19 @@ g:gitu_commit_height                                    *g:gitu_commit_height*
     Default: 15
 
 ==============================================================================
-6. HIGHLIGHTS                                               *gitu-highlights*
+7. HIGHLIGHTS                                               *gitu-highlights*
+
+Status view highlights:
+    GitUStatusBranch         Branch information line. (default: Title)
+    GitUStatusHeaderStaged   Staged changes header. (default: diffAdded)
+    GitUStatusHeaderUnstaged Unstaged changes header. (default: diffRemoved)
+    GitUStatusHeaderUntracked Untracked files header. (default: diffChanged)
+    GitUStatusClean          Clean working tree notice. (default: Comment)
+    GitUStatusSymbolAdded    'A' symbol. (default: diffAdded)
+    GitUStatusSymbolModified 'M' symbol. (default: diffChanged)
+    GitUStatusSymbolDeleted  'D' symbol. (default: diffRemoved)
+    GitUStatusSymbolRenamed  'R' symbol. (default: diffChanged)
+    GitUStatusSymbolUntracked '?' symbol. (default: PreProc)
 
 Log pane highlights:
     GitULogGraph        Graph tree characters (*, |, /, \). (default: Delimiter)
@@ -132,11 +185,13 @@ Diff pane highlights:
     GitUDiffHunk        Hunk boundary line (@@ ... @@). (default: diffLine)
 
 ==============================================================================
-7. FILETYPES                                                   *gitu-filetypes*
+8. FILETYPES                                                   *gitu-filetypes*
 
     gitu-log            Buffer filetype for the Git commit graph pane.
     gitu-commit         Buffer filetype for the commit metadata pane.
     gitu-diff           Buffer filetype for the diff preview pane.
+    gitu-status         Buffer filetype for the Git status viewer.
+    gitu-stage-head     Buffer filetype for the HEAD panel in 3-way staging.
 
 ==============================================================================
 vim:tw=78:ts=8:ft=help:norl:

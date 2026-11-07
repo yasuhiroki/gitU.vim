@@ -9,22 +9,28 @@ License: MIT License
     1. 概要 ................................................... |gitu-overview|
     2. インストール ........................................... |gitu-installation|
     3. コマンド ............................................... |gitu-commands|
-    4. ペイン構成とキーマッピング ............................. |gitu-keymaps|
-    5. オプション ............................................. |gitu-options|
-    6. ハイライト ............................................. |gitu-highlights|
-    7. ファイルタイプ ......................................... |gitu-filetypes|
+    4. ステータスと 3 パネルステージング ...................... |gitu-status|
+    5. ペイン構成とキーマッピング ............................. |gitu-keymaps|
+    6. オプション ............................................. |gitu-options|
+    7. ハイライト ............................................. |gitu-highlights|
+    8. ファイルタイプ ......................................... |gitu-filetypes|
 
 ==============================================================================
 1. 概要                                                        *gitu-overview*
 
 gitU.vim は Vim9 script で書かれたインタラクティブな Git 操作プラグインです。
-gitk や tig に着想を得た 3 ペイン構成のコミット閲覧インターフェースを Vim 内で
-非同期に高速かつ軽快に提供します。
+gitk や tig に着想を得た 3 ペイン構成のコミット閲覧インターフェース、および
+Git ステータス管理と 3 パネル縦分割による対話的パッチ編集 (`git add -p`) を
+Vim 内で非同期に高速かつ軽快に提供します。
 
 主な特徴:
 - 3 ペイン連動コミットビューア (:GitULog)
+- インタラクティブな Git ステータス画面 (:GitUStatus / :GitU)
+  - `>>` でステージング (`git add`)
+  - `<<` でアンステージ (`git restore --staged`)
+  - `pp` で 3 パネル縦分割パッチ編集 (`git add -p` / edit 相当)
+- 3 パネルエディタ (HEAD | STAGE | CURRENT) によるインデックスの直接編集
 - Vim9 job を用いた非同期実行による非ブロッキング操作
-- ログ、詳細、差分のカーソル移動連動
 - バッファローカルなキーマッピングと専用シンタックスハイライト
 
 動作要件:
@@ -58,8 +64,45 @@ Vim 8/9 packages: >
         :GitULog -n 50
 <   一般的な Git オプションのコマンドライン補完が利用可能です。
 
+:GitUStatus                                                      *:GitUStatus*
+:GitU                                                                  *:GitU*
+    新しいタブページにインタラクティブな Git ステータス画面を開きます。
+
 ==============================================================================
-4. ペイン構成とキーマッピング                                   *gitu-keymaps*
+4. ステータスと 3 パネルステージング                              *gitu-status*
+
+:GitUStatus 画面では、ファイルが以下のセクションに整理されて表示されます:
+    - Changes to be committed (ステージ済み変更)
+    - Changes not staged for commit (未ステージの変更)
+    - Untracked files (追跡対象外のファイル)
+
+ステータス画面でのキーマッピング:
+    >>                  カーソル行のファイルをステージします (`git add`)。
+    <<                  カーソル行のファイルをアンステージします (`git restore --staged`)。
+    pp                  3 パネル縦分割パッチエディタを開きます (`git add -p`)。
+    u                   表示内容を更新 (update / refresh) します。
+    q                   ステータス画面を閉じます。
+
+3 パネルパッチエディタ (`pp`):
+ファイル行で `pp` を押すと、新しいタブページに縦に 3 分割されたパネルが開きます:
+
+    +-------------------+-------------------+-------------------+
+    | [GitU:HEAD]       | [GitU:STAGE]      | [CURRENT]         |
+    |                   |                   |                   |
+    | 最新コミット HEAD | Git インデックス  | ワーキングツリー  |
+    | (読み取り専用)    | (編集可能ステージ)| (実ファイル編集)  |
+    +-------------------+-------------------+-------------------+
+
+3 つのパネルすべてで Vim の diff モード (`diffthis`) が有効になります。
+- 中央の [GitU:STAGE] パネルが Git インデックスの内容を表します。
+  `do` や `diffget` で右の CURRENT から変更を取り込んだり、直接編集できます。
+- STAGE パネルで保存 (`:w`) すると、バッファ内容が即座に Git オブジェクトとして
+  保存され、`git update-index` 経由で Git インデックスが更新されます。
+- いずれかのパネルで `q` を押すと diff モードを解除してタブを閉じ、
+  ステータス画面に戻って自動更新されます。
+
+==============================================================================
+5. ペイン構成とキーマッピング                                   *gitu-keymaps*
 
 :GitULog は連動する 3 つのペインで構成されます:
 
@@ -73,9 +116,9 @@ Vim 8/9 packages: >
     |                   | 選択ファイルの unified diff       |
     +-------------------+-----------------------------------+
 
-共通キーマッピング (バッファローカル):
+:GitULog でのキーマッピング:
     q                   GitU ビューを閉じ、実行中のジョブを停止します。
-    u                   表示内容を更新 (update / refresh) します。
+    u                   表示内容を最新状態に更新します。
     <Tab>               フォーカスを次のペインへ進めます。
     <S-Tab>             フォーカスを前のペインへ戻します。
 
@@ -91,7 +134,7 @@ Vim 8/9 packages: >
                         フォーカスを diff ペインへ移動します。
 
 ==============================================================================
-5. オプション                                                  *gitu-options*
+6. オプション                                                  *gitu-options*
 
 g:gitu_commit_height                                    *g:gitu_commit_height*
     :GitULog ビューにおける右上コミット詳細ペインの行数 (高さ)。
@@ -99,7 +142,19 @@ g:gitu_commit_height                                    *g:gitu_commit_height*
     初期値: 15
 
 ==============================================================================
-6. ハイライト                                               *gitu-highlights*
+7. ハイライト                                               *gitu-highlights*
+
+ステータス画面:
+    GitUStatusBranch         ブランチ情報行。 (デフォルト: Title)
+    GitUStatusHeaderStaged   ステージ済み変更ヘッダー。 (デフォルト: diffAdded)
+    GitUStatusHeaderUnstaged 未ステージ変更ヘッダー。 (デフォルト: diffRemoved)
+    GitUStatusHeaderUntracked 追跡対象外ヘッダー。 (デフォルト: diffChanged)
+    GitUStatusClean          クリーン通知。 (デフォルト: Comment)
+    GitUStatusSymbolAdded    'A' 記号。 (デフォルト: diffAdded)
+    GitUStatusSymbolModified 'M' 記号。 (デフォルト: diffChanged)
+    GitUStatusSymbolDeleted  'D' 記号。 (デフォルト: diffRemoved)
+    GitUStatusSymbolRenamed  'R' 記号。 (デフォルト: diffChanged)
+    GitUStatusSymbolUntracked '?' 記号。 (デフォルト: PreProc)
 
 ログペイン:
     GitULogGraph        グラフ記号 (*, |, /, \)。 (デフォルト: Delimiter)
@@ -128,15 +183,17 @@ g:gitu_commit_height                                    *g:gitu_commit_height*
     GitUDiffChanged     変更行。 (デフォルト: diffChanged)
     GitUDiffFile        ファイルヘッダー (diff --git ...)。 (デフォルト: diffFile)
     GitUDiffMeta        インデックス等のメタ行。 (デフォルト: diffIndexLine)
-    GitUDiffHeader      差分ヘッダー (--- / +++)。 (デフォルト: diffSubname)
+    GitUDiffHeader      差分ヘッダー (--- / +++). (デフォルト: diffSubname)
     GitUDiffHunk        ハンク行 (@@ ... @@)。 (デフォルト: diffLine)
 
 ==============================================================================
-7. ファイルタイプ                                              *gitu-filetypes*
+8. ファイルタイプ                                              *gitu-filetypes*
 
     gitu-log            コミットグラフペインの filetype。
     gitu-commit         コミット詳細ペインの filetype。
     gitu-diff           差分プレビューペインの filetype。
+    gitu-status         Git ステータス画面の filetype。
+    gitu-stage-head     3 パネルステージングにおける HEAD ペインの filetype。
 
 ==============================================================================
 vim:tw=78:ts=8:ft=help:norl:
