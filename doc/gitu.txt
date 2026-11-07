@@ -1,64 +1,142 @@
-*gitu.txt*	Git operations plugin for Vim
+*gitu.txt*	Interactive Git Operations Plugin for Vim
 
-Author: yasuhiroki
+Author:  yasuhiroki <yasuhiroki.duck@gmail.com>
 License: MIT License
 
 ==============================================================================
 CONTENTS                                                       *gitu-contents*
 
     1. Overview ............................................... |gitu-overview|
-    2. Commands ............................................... |gitu-commands|
-    3. Panes and Keymaps ...................................... |gitu-keymaps|
-    4. Options ................................................ |gitu-options|
-    5. Filetypes .............................................. |gitu-filetypes|
+    2. Installation ........................................... |gitu-installation|
+    3. Commands ............................................... |gitu-commands|
+    4. Panes and Keymaps ...................................... |gitu-keymaps|
+    5. Options ................................................ |gitu-options|
+    6. Highlights ............................................. |gitu-highlights|
+    7. Filetypes .............................................. |gitu-filetypes|
 
 ==============================================================================
 1. OVERVIEW                                                    *gitu-overview*
 
-gitU.vim provides interactive Git operations within Vim, written in Vim9 script.
+gitU.vim is an interactive Git plugin for Vim, written in Vim9 script.
+It is inspired by graphical Git viewers such as gitk and tig, providing a
+responsive, multi-pane commit inspection interface directly inside Vim.
 
-Features:
-- 3-pane interactive git log viewer (:GitULog), inspired by gitk / tig.
-- Non-blocking asynchronous Git execution.
-- Dedicated filetypes and syntax highlighting for log graph, commit info,
-  and diff buffers.
+Key Features:
+- 3-pane interactive Git log viewer (:GitULog).
+- Asynchronous execution via Vim9 jobs to keep the editor responsive.
+- Synchronized cursor navigation across log, commit details, and diff.
+- Buffer-local keymaps and dedicated filetypes with syntax highlighting.
+
+Requirements:
+- Vim 9.0 or later (with `+vim9script` and `+job` support)
+- `git` command in `$PATH`
 
 ==============================================================================
-2. COMMANDS                                                    *gitu-commands*
+2. INSTALLATION                                            *gitu-installation*
+
+Using your favorite plugin manager:
+
+vim-plug: >
+    Plug 'yasuhiroki/gitU.vim'
+<
+minpac: >
+    call minpac#add('yasuhiroki/gitU.vim')
+<
+Vim 8/9 packages: >
+    git clone https://github.com/yasuhiroki/gitU.vim.git \
+        ~/.vim/pack/plugins/start/gitU.vim
+<
+==============================================================================
+3. COMMANDS                                                    *gitu-commands*
 
 :GitULog [args]                                                    *:GitULog*
     Opens the 3-pane interactive Git log viewer in a new tab page.
-    Accepts arbitrary git log arguments (e.g. `--all`, `--first-parent`).
+    Pass any arguments accepted by `git log`: >
+        :GitULog
+        :GitULog --all
+        :GitULog --first-parent
+        :GitULog -n 50
+<   Command completion is available for common Git options.
 
 ==============================================================================
-3. PANES AND KEYMAPS                                            *gitu-keymaps*
+4. PANES AND KEYMAPS                                            *gitu-keymaps*
 
-The :GitULog view consists of three panes:
-    - Left:         gitu-log    (Git commit graph)
-    - Top-Right:    gitu-commit (Commit details, message, and changed files)
-    - Bottom-Right: gitu-diff   (Unified diff of commit or selected file)
+The :GitULog view consists of three synchronized panes:
+
+    +-------------------+-----------------------------------+
+    |                   | [GitU:Commit]                     |
+    |                   | Commit info, author, date,        |
+    | [GitU:Log]        | commit message, changed files     |
+    | Graph & commits   +-----------------------------------+
+    |                   | [GitU:Diff]                       |
+    |                   | Unified diff of commit or         |
+    |                   | selected changed file             |
+    +-------------------+-----------------------------------+
 
 Key Mappings (Buffer-local):
-    q               Close the GitU view and cancel background jobs.
-    r               Refresh the commit log and views.
-    <Tab>           Cycle focus forward across panes.
-    <S-Tab>         Cycle focus backward across panes.
-    <CR> (in log)   Force update details and diff for commit under cursor.
-    <CR> (in commit) Jump to diff pane for the file under cursor.
+    q                   Close the GitU view and cancel background jobs.
+    r                   Refresh the current view.
+    <Tab>               Cycle focus forward across panes.
+    <S-Tab>             Cycle focus backward across panes.
+
+In the [GitU:Log] pane:
+    j / k               Navigate commits. Moving the cursor automatically
+                        updates the commit detail and diff panes.
+    <CR>                Force update details and diff for commit under cursor.
+
+In the [GitU:Commit] pane:
+    j / k               Scroll metadata or navigate changed file entries under
+                        the "--- Files ---" section.
+    <CR>                Jump focus to the diff pane, showing the diff for the
+                        selected file under the cursor.
 
 ==============================================================================
-4. OPTIONS                                                     *gitu-options*
+5. OPTIONS                                                     *gitu-options*
 
 g:gitu_commit_height                                    *g:gitu_commit_height*
     Height (in rows) of the top-right commit detail pane in the :GitULog view.
+    Set to 0 or negative to disable resizing and preserve equal splits.
     Default: 15
 
 ==============================================================================
-5. FILETYPES                                                   *gitu-filetypes*
+6. HIGHLIGHTS                                               *gitu-highlights*
 
-    gitu-log        Commit graph view.
-    gitu-commit     Commit metadata and changed file list.
-    gitu-diff       Diff view.
+Log pane highlights:
+    GitULogGraph        Graph tree characters (*, |, /, \). (default: Delimiter)
+    GitULogHash         Commit SHA hashes. (default: Identifier)
+    GitULogRefs         Branch/tag reference names. (default: Statement)
+    GitULogAuthor       Author names enclosed in <>. (default: Type)
+    GitULogDate         Commit timestamp. (default: Comment)
+
+Commit pane highlights:
+    GitUCommitHeader    Header labels (Commit:, Author:, etc.). (default: Keyword)
+    GitUCommitHash      Commit hash. (default: Identifier)
+    GitUCommitRefs      Branch/tag references. (default: Statement)
+    GitUCommitDivider   Divider before files (--- Files ---). (default: Title)
+    GitUCommitStatusAdded    'A' file status indicator. (default: diffAdded)
+    GitUCommitStatusModified 'M' file status indicator. (default: diffChanged)
+    GitUCommitStatusDeleted  'D' file status indicator. (default: diffRemoved)
+    GitUCommitStatusRenamed  'R' file status indicator. (default: diffChanged)
+    GitUCommitFileAdded      File path for added files. (default: Directory)
+    GitUCommitFileModified   File path for modified files. (default: Directory)
+    GitUCommitFileDeleted    File path for deleted files. (default: Directory)
+    GitUCommitFileRenamed    File path for renamed files. (default: Directory)
+
+Diff pane highlights:
+    GitUDiffAdded       Added lines (+...). (default: diffAdded)
+    GitUDiffRemoved     Removed lines (-...). (default: diffRemoved)
+    GitUDiffChanged     Changed indicators. (default: diffChanged)
+    GitUDiffFile        File header lines (diff --git ...). (default: diffFile)
+    GitUDiffMeta        Index and mode meta lines. (default: diffIndexLine)
+    GitUDiffHeader      Diff headers (--- / +++). (default: diffSubname)
+    GitUDiffHunk        Hunk boundary line (@@ ... @@). (default: diffLine)
+
+==============================================================================
+7. FILETYPES                                                   *gitu-filetypes*
+
+    gitu-log            Buffer filetype for the Git commit graph pane.
+    gitu-commit         Buffer filetype for the commit metadata pane.
+    gitu-diff           Buffer filetype for the diff preview pane.
 
 ==============================================================================
 vim:tw=78:ts=8:ft=help:norl:

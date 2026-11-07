@@ -1,0 +1,142 @@
+*gitu.jax*	インタラクティブな Git 操作を提供する Vim プラグイン
+
+Author:  yasuhiroki <yasuhiroki.duck@gmail.com>
+License: MIT License
+
+==============================================================================
+目次                                                           *gitu-contents*
+
+    1. 概要 ................................................... |gitu-overview|
+    2. インストール ........................................... |gitu-installation|
+    3. コマンド ............................................... |gitu-commands|
+    4. ペイン構成とキーマッピング ............................. |gitu-keymaps|
+    5. オプション ............................................. |gitu-options|
+    6. ハイライト ............................................. |gitu-highlights|
+    7. ファイルタイプ ......................................... |gitu-filetypes|
+
+==============================================================================
+1. 概要                                                        *gitu-overview*
+
+gitU.vim は Vim9 script で書かれたインタラクティブな Git 操作プラグインです。
+gitk や tig に着想を得た 3 ペイン構成のコミット閲覧インターフェースを Vim 内で
+非同期に高速かつ軽快に提供します。
+
+主な特徴:
+- 3 ペイン連動コミットビューア (:GitULog)
+- Vim9 job を用いた非同期実行による非ブロッキング操作
+- ログ、詳細、差分のカーソル移動連動
+- バッファローカルなキーマッピングと専用シンタックスハイライト
+
+動作要件:
+- Vim 9.0 以降 (`+vim9script`, `+job` サポート必須)
+- 環境変数 `$PATH` 上の `git` コマンド
+
+==============================================================================
+2. インストール                                            *gitu-installation*
+
+お好みのプラグインマネージャをご利用ください:
+
+vim-plug: >
+    Plug 'yasuhiroki/gitU.vim'
+<
+minpac: >
+    call minpac#add('yasuhiroki/gitU.vim')
+<
+Vim 8/9 packages: >
+    git clone https://github.com/yasuhiroki/gitU.vim.git \
+        ~/.vim/pack/plugins/start/gitU.vim
+<
+==============================================================================
+3. コマンド                                                    *gitu-commands*
+
+:GitULog [args]                                                    *:GitULog*
+    新しいタブページに 3 ペインの Git ログビューアを開きます。
+    `git log` に渡せる任意の引数を指定可能です: >
+        :GitULog
+        :GitULog --all
+        :GitULog --first-parent
+        :GitULog -n 50
+<   一般的な Git オプションのコマンドライン補完が利用可能です。
+
+==============================================================================
+4. ペイン構成とキーマッピング                                   *gitu-keymaps*
+
+:GitULog は連動する 3 つのペインで構成されます:
+
+    +-------------------+-----------------------------------+
+    |                   | [GitU:Commit]                     |
+    |                   | コミット情報、作者、日付、        |
+    | [GitU:Log]        | コミットメッセージ、変更ファイル  |
+    | コミットグラフ    +-----------------------------------+
+    |                   | [GitU:Diff]                       |
+    |                   | コミット全体または                |
+    |                   | 選択ファイルの unified diff       |
+    +-------------------+-----------------------------------+
+
+共通キーマッピング (バッファローカル):
+    q                   GitU ビューを閉じ、実行中のジョブを停止します。
+    r                   表示内容を最新状態に更新します。
+    <Tab>               フォーカスを次のペインへ進めます。
+    <S-Tab>             フォーカスを前のペインへ戻します。
+
+[GitU:Log] ペイン:
+    j / k               コミット一覧を移動します。カーソル移動に伴い、
+                        右上と右下の詳細・diff が自動更新されます。
+    <CR>                カーソル行のコミット情報と差分を強制再読み込みします。
+
+[GitU:Commit] ペイン:
+    j / k               コミット詳細のスクロール、または "--- Files ---" 以下の
+                        変更ファイル一覧を移動します。
+    <CR>                カーソル下のファイル差分を右下ペインに表示し、
+                        フォーカスを diff ペインへ移動します。
+
+==============================================================================
+5. オプション                                                  *gitu-options*
+
+g:gitu_commit_height                                    *g:gitu_commit_height*
+    :GitULog ビューにおける右上コミット詳細ペインの行数 (高さ)。
+    0 以下の値を指定すると自動リサイズが無効となり等分分割されます。
+    初期値: 15
+
+==============================================================================
+6. ハイライト                                               *gitu-highlights*
+
+ログペイン:
+    GitULogGraph        グラフ記号 (*, |, /, \)。 (デフォルト: Delimiter)
+    GitULogHash         コミットハッシュ。 (デフォルト: Identifier)
+    GitULogRefs         ブランチ/タグ参照名。 (デフォルト: Statement)
+    GitULogAuthor       <> 内の作者名。 (デフォルト: Type)
+    GitULogDate         コミット日時。 (デフォルト: Comment)
+
+コミット詳細ペイン:
+    GitUCommitHeader    ヘッダー項目名 (Commit:, Author: 等)。 (デフォルト: Keyword)
+    GitUCommitHash      コミットハッシュ。 (デフォルト: Identifier)
+    GitUCommitRefs      ブランチ/タグ参照。 (デフォルト: Statement)
+    GitUCommitDivider   ファイル区切り線 (--- Files ---)。 (デフォルト: Title)
+    GitUCommitStatusAdded    追加状態 'A'。 (デフォルト: diffAdded)
+    GitUCommitStatusModified 変更状態 'M'。 (デフォルト: diffChanged)
+    GitUCommitStatusDeleted  削除状態 'D'。 (デフォルト: diffRemoved)
+    GitUCommitStatusRenamed  名前変更状態 'R'。 (デフォルト: diffChanged)
+    GitUCommitFileAdded      追加ファイルパス。 (デフォルト: Directory)
+    GitUCommitFileModified   変更ファイルパス。 (デフォルト: Directory)
+    GitUCommitFileDeleted    削除ファイルパス。 (デフォルト: Directory)
+    GitUCommitFileRenamed    名前変更ファイルパス。 (デフォルト: Directory)
+
+差分ペイン:
+    GitUDiffAdded       追加行 (+...)。 (デフォルト: diffAdded)
+    GitUDiffRemoved     削除行 (-...)。 (デフォルト: diffRemoved)
+    GitUDiffChanged     変更行。 (デフォルト: diffChanged)
+    GitUDiffFile        ファイルヘッダー (diff --git ...)。 (デフォルト: diffFile)
+    GitUDiffMeta        インデックス等のメタ行。 (デフォルト: diffIndexLine)
+    GitUDiffHeader      差分ヘッダー (--- / +++)。 (デフォルト: diffSubname)
+    GitUDiffHunk        ハンク行 (@@ ... @@)。 (デフォルト: diffLine)
+
+==============================================================================
+7. ファイルタイプ                                              *gitu-filetypes*
+
+    gitu-log            コミットグラフペインの filetype。
+    gitu-commit         コミット詳細ペインの filetype。
+    gitu-diff           差分プレビューペインの filetype。
+
+==============================================================================
+vim:tw=78:ts=8:ft=help:norl:
