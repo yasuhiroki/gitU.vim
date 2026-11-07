@@ -63,7 +63,7 @@ def TestOpen3Way()
     assert_equal(15, winheight(status_winid))
 
     # Active window should be the center STAGE panel
-    assert_match('\[GitU:STAGE: test\.txt\]$', bufname('%'))
+    assert_match('\[GitU:STAGE\] test\.txt$', bufname('%'))
 
     # Edit STAGE buffer and save
     setline(1, 'staged content')
@@ -89,9 +89,51 @@ def TestOpen3Way()
     delete(temp_dir, 'rf')
 enddef
 
+def Test3WayFiletypeAndSyntax()
+    filetype plugin on
+    syntax on
+
+    var temp_dir = tempname() .. '_gitu_test_ft'
+    mkdir(temp_dir, 'p')
+
+    system('git -C ' .. fnameescape(temp_dir) .. ' init -b main')
+    system('git -C ' .. fnameescape(temp_dir) .. ' config user.name "Test"')
+    system('git -C ' .. fnameescape(temp_dir) .. ' config user.email "test@example.com"')
+
+    var file_path = temp_dir .. '/sample.py'
+    writefile(['def hello():', '    pass'], file_path)
+    system('git -C ' .. fnameescape(temp_dir) .. ' add sample.py')
+    system('git -C ' .. fnameescape(temp_dir) .. ' commit -m "add python"')
+
+    writefile(['def hello():', '    print("hello")'], file_path)
+
+    enew
+    var status_winid = win_getid()
+
+    stage.Open3Way(temp_dir, 'sample.py', status_winid)
+
+    assert_equal('python', &filetype)
+    assert_equal('[GitU:STAGE] sample.py', bufname('%'))
+
+    wincmd h
+    assert_equal('python', &filetype)
+    assert_equal('[GitU:HEAD] sample.py', bufname('%'))
+
+    wincmd l
+    wincmd l
+    assert_equal('python', &filetype)
+    assert_match('sample\.py$', bufname('%'))
+
+    stage.Close3Way()
+
+    bwipeout!
+    delete(temp_dir, 'rf')
+enddef
+
 def RunAll()
     TestSaveStageBuffer()
     TestOpen3Way()
+    Test3WayFiletypeAndSyntax()
 
     var errors = v:errors
     if len(errors) > 0

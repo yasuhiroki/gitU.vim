@@ -9,7 +9,9 @@ export def InitCurrentScratch(filetype: string, buf_name: string = ''): number
     if buf_name != ''
         silent! execute 'noautocmd file ' .. fnameescape(buf_name)
     endif
-    execute 'setlocal filetype=' .. filetype
+    if filetype != ''
+        execute 'setlocal filetype=' .. filetype
+    endif
     return bufnr('%')
 enddef
 

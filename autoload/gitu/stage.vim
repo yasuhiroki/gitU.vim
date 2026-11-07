@@ -116,7 +116,7 @@ export def Open3Way(repo_root: string, rel_file_path: string, status_winid: numb
     # Panel 1 (Left): HEAD
     botright new
     var head_winid: number = win_getid()
-    var head_bufnr: number = buffer.InitCurrentScratch('gitu-stage-head', '[GitU:HEAD: ' .. rel_file_path .. ']')
+    var head_bufnr: number = buffer.InitCurrentScratch('', '[GitU:HEAD] ' .. rel_file_path)
     buffer.SetLines(head_bufnr, head_lines)
     setlocal nomodifiable
     diffthis
@@ -129,8 +129,7 @@ export def Open3Way(repo_root: string, rel_file_path: string, status_winid: numb
     setlocal buftype=acwrite
     setlocal bufhidden=wipe
     setlocal noswapfile
-    silent! execute 'noautocmd file ' .. fnameescape('[GitU:STAGE: ' .. rel_file_path .. ']')
-    execute 'setlocal filetype=' .. fnamemodify(rel_file_path, ':e')
+    silent! execute 'noautocmd file ' .. fnameescape('[GitU:STAGE] ' .. rel_file_path)
     setbufline(stage_bufnr, 1, stage_lines)
     setlocal nomodified
     diffthis
@@ -151,6 +150,20 @@ export def Open3Way(repo_root: string, rel_file_path: string, status_winid: numb
     execute 'edit ' .. fnameescape(full_path)
     diffthis
     nnoremap <buffer> <silent> q <ScriptCmd>Close3Way()<CR>
+
+    var target_filetype: string = &filetype
+    if target_filetype == ''
+        filetype detect
+        target_filetype = &filetype
+    endif
+
+    if target_filetype != ''
+        win_execute(head_winid, 'setlocal filetype=' .. target_filetype)
+        win_execute(stage_winid, 'setlocal filetype=' .. target_filetype)
+    else
+        win_execute(head_winid, 'filetype detect')
+        win_execute(stage_winid, 'filetype detect')
+    endif
 
     if status_height > 0 && status_winid > 0 && win_id2win(status_winid) > 0
         win_execute(status_winid, 'resize ' .. string(status_height))
