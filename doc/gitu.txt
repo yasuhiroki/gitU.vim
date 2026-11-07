@@ -76,8 +76,9 @@ In the :GitUStatus view, files are grouped into sections:
     - Untracked files
 
 Key Mappings in status buffer:
-    <<                  Stage the file under cursor (`git add`).
-    >>                  Unstage the file under cursor (`git restore --staged`).
+    <<                  Stage file(s) under cursor or visual selection (`git add`).
+    >>                  Unstage file(s) under cursor or visual selection
+                        (`git restore --staged`).
     dd                  Open diff preview for the file under cursor.
     pp                  Open 3-way vertical patch editor (`git add -p`).
     u                   Update / refresh the status view.

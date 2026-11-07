@@ -230,24 +230,36 @@ export def Refresh()
     LoadStatus(view_id)
 enddef
 
-export def StageCurrent()
-    var view_id: number = GetCurrentViewId()
-    var key: string = GetViewKey(view_id)
-    if !has_key(views, key)
-        return
+export def GetSelectedFiles(state: dict<any>, start_lnum: number, end_lnum: number, action: string): list<string>
+    if start_lnum <= 0 || end_lnum <= 0
+        return []
     endif
-    var state = views[key]
-    var lnum: number = line('.')
-    var entry: dict<any> = get(state.line_map, string(lnum), {})
-    if empty(entry) || get(entry, 'file', '') == ''
-        return
-    endif
+    var s: number = min([start_lnum, end_lnum])
+    var e: number = max([start_lnum, end_lnum])
+    var files: list<string> = []
+    for lnum in range(s, e)
+        var entry: dict<any> = get(state.line_map, string(lnum), {})
+        if empty(entry) || get(entry, 'file', '') == ''
+            continue
+        endif
+        if action == 'stage' && entry.section != 'staged'
+            if index(files, entry.file) < 0
+                add(files, entry.file)
+            endif
+        elseif action == 'unstage' && entry.section == 'staged'
+            if index(files, entry.file) < 0
+                add(files, entry.file)
+            endif
+        endif
+    endfor
+    return files
+enddef
 
-    if entry.section == 'staged'
+def StageFiles(key: string, state: dict<any>, files: list<string>)
+    if empty(files)
         return
     endif
-
-    git.Run(['add', '--', entry.file], {
+    git.Run(['add', '--'] + files, {
         cwd: state.cwd,
         task_key: 'gitu_status_action_' .. key,
         on_exit: (res: dict<any>) => {
@@ -256,7 +268,7 @@ export def StageCurrent()
             endif
             if res.status != 0
                 echohl ErrorMsg
-                echomsg 'Failed to stage ' .. entry.file .. ': ' .. join(res.stderr, ' ')
+                echomsg 'Failed to stage: ' .. join(res.stderr, ' ')
                 echohl None
                 return
             endif
@@ -265,8 +277,8 @@ export def StageCurrent()
     })
 enddef
 
-def FallbackReset(key: string, cwd: string, file: string)
-    git.Run(['reset', 'HEAD', '--', file], {
+def FallbackReset(key: string, cwd: string, files: list<string>)
+    git.Run(['reset', 'HEAD', '--'] + files, {
         cwd: cwd,
         task_key: 'gitu_status_action_' .. key,
         on_exit: (res: dict<any>) => {
@@ -275,13 +287,45 @@ def FallbackReset(key: string, cwd: string, file: string)
             endif
             if res.status != 0
                 echohl ErrorMsg
-                echomsg 'Failed to unstage ' .. file .. ': ' .. join(res.stderr, ' ')
+                echomsg 'Failed to unstage: ' .. join(res.stderr, ' ')
                 echohl None
                 return
             endif
             Refresh()
         },
     })
+enddef
+
+def UnstageFiles(key: string, state: dict<any>, files: list<string>)
+    if empty(files)
+        return
+    endif
+    git.Run(['restore', '--staged', '--'] + files, {
+        cwd: state.cwd,
+        task_key: 'gitu_status_action_' .. key,
+        on_exit: (res: dict<any>) => {
+            if !has_key(views, key)
+                return
+            endif
+            if res.status != 0
+                FallbackReset(key, state.cwd, files)
+                return
+            endif
+            Refresh()
+        },
+    })
+enddef
+
+export def StageCurrent()
+    var view_id: number = GetCurrentViewId()
+    var key: string = GetViewKey(view_id)
+    if !has_key(views, key)
+        return
+    endif
+    var state = views[key]
+    var cur_lnum: number = line('.')
+    var files: list<string> = GetSelectedFiles(state, cur_lnum, cur_lnum, 'stage')
+    StageFiles(key, state, files)
 enddef
 
 export def UnstageCurrent()
@@ -291,30 +335,35 @@ export def UnstageCurrent()
         return
     endif
     var state = views[key]
-    var lnum: number = line('.')
-    var entry: dict<any> = get(state.line_map, string(lnum), {})
-    if empty(entry) || get(entry, 'file', '') == ''
+    var cur_lnum: number = line('.')
+    var files: list<string> = GetSelectedFiles(state, cur_lnum, cur_lnum, 'unstage')
+    UnstageFiles(key, state, files)
+enddef
+
+export def StageVisual()
+    var view_id: number = GetCurrentViewId()
+    var key: string = GetViewKey(view_id)
+    if !has_key(views, key)
         return
     endif
+    var state = views[key]
+    var start_lnum: number = line("'<")
+    var end_lnum: number = line("'>")
+    var files: list<string> = GetSelectedFiles(state, start_lnum, end_lnum, 'stage')
+    StageFiles(key, state, files)
+enddef
 
-    if entry.section != 'staged'
+export def UnstageVisual()
+    var view_id: number = GetCurrentViewId()
+    var key: string = GetViewKey(view_id)
+    if !has_key(views, key)
         return
     endif
-
-    git.Run(['restore', '--staged', '--', entry.file], {
-        cwd: state.cwd,
-        task_key: 'gitu_status_action_' .. key,
-        on_exit: (res: dict<any>) => {
-            if !has_key(views, key)
-                return
-            endif
-            if res.status != 0
-                FallbackReset(key, state.cwd, entry.file)
-                return
-            endif
-            Refresh()
-        },
-    })
+    var state = views[key]
+    var start_lnum: number = line("'<")
+    var end_lnum: number = line("'>")
+    var files: list<string> = GetSelectedFiles(state, start_lnum, end_lnum, 'unstage')
+    UnstageFiles(key, state, files)
 enddef
 
 export def OpenPatchEdit()

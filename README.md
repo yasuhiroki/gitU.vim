@@ -41,8 +41,8 @@ A Vim plugin for Git operations, written in Vim9 script.
 - `<CR>` (in commit pane): Jump to diff of the selected file
 
 #### Within `:GitUStatus` buffer:
-- `<<`: Stage the file under cursor (`git add`)
-- `>>`: Unstage the file under cursor (`git restore --staged`)
+- `<<` (Normal / Visual): Stage the file(s) under cursor or in visual selection (`git add`)
+- `>>` (Normal / Visual): Unstage the file(s) under cursor or in visual selection (`git restore --staged`)
 - `dd`: View diff of the file under cursor
 - `pp`: Open 3-way vertical patch editor (`HEAD` | `STAGE` | `CURRENT`)
 - `u`: Update / refresh the status view

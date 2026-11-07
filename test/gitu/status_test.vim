@@ -66,10 +66,35 @@ def TestBuildDiffArgs()
     assert_equal(['diff', '--no-index', '--', '/dev/null', 'baz.txt'], status.BuildDiffArgs('untracked', 'baz.txt'))
 enddef
 
+def TestGetSelectedFiles()
+    var state = {
+        line_map: {
+            '4': { section: 'staged', status: 'M', file: 'staged1.txt' },
+            '5': { section: 'staged', status: 'A', file: 'staged2.txt' },
+            '8': { section: 'unstaged', status: 'M', file: 'unstaged1.txt' },
+            '9': { section: 'unstaged', status: 'M', file: 'unstaged2.txt' },
+            '12': { section: 'untracked', status: '?', file: 'untracked1.txt' },
+        }
+    }
+
+    assert_equal(['unstaged1.txt', 'unstaged2.txt'], status.GetSelectedFiles(state, 8, 9, 'stage'))
+    assert_equal(['unstaged1.txt', 'unstaged2.txt', 'untracked1.txt'], status.GetSelectedFiles(state, 8, 13, 'stage'))
+    assert_equal([], status.GetSelectedFiles(state, 4, 5, 'stage'))
+    assert_equal(['unstaged1.txt'], status.GetSelectedFiles(state, 4, 8, 'stage'))
+
+    assert_equal(['staged1.txt', 'staged2.txt'], status.GetSelectedFiles(state, 4, 5, 'unstage'))
+    assert_equal(['staged1.txt', 'staged2.txt'], status.GetSelectedFiles(state, 1, 10, 'unstage'))
+    assert_equal([], status.GetSelectedFiles(state, 8, 12, 'unstage'))
+
+    assert_equal(['staged1.txt', 'staged2.txt'], status.GetSelectedFiles(state, 5, 4, 'unstage'))
+    assert_equal([], status.GetSelectedFiles(state, 0, 0, 'stage'))
+enddef
+
 def RunAll()
     TestParsePorcelain()
     TestRenderStatus()
     TestBuildDiffArgs()
+    TestGetSelectedFiles()
 
     var errors = v:errors
     if len(errors) > 0
