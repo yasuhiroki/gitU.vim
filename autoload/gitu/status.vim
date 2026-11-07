@@ -135,6 +135,15 @@ export def RenderStatus(parsed: dict<any>): dict<any>
     return { lines: lines, line_map: line_map }
 enddef
 
+export def BuildDiffArgs(section: string, file_path: string): list<string>
+    if section == 'staged'
+        return ['diff', '--cached', '--', file_path]
+    elseif section == 'untracked'
+        return ['diff', '--no-index', '--', '/dev/null', file_path]
+    endif
+    return ['diff', '--', file_path]
+enddef
+
 def LoadStatus(view_id: number)
     var key: string = GetViewKey(view_id)
     if !has_key(views, key)
@@ -326,12 +335,65 @@ export def OpenPatchEdit()
     })
 enddef
 
+export def OpenDiff()
+    var view_id: number = GetCurrentViewId()
+    var key: string = GetViewKey(view_id)
+    if !has_key(views, key)
+        return
+    endif
+    var state = views[key]
+    var lnum: number = line('.')
+    var entry: dict<any> = get(state.line_map, string(lnum), {})
+    if empty(entry) || get(entry, 'file', '') == ''
+        return
+    endif
+
+    var diff_winid: number = get(state, 'diff_winid', -1)
+    if diff_winid > 0 && win_id2win(diff_winid) > 0
+        win_gotoid(diff_winid)
+    else
+        rightbelow new
+        diff_winid = win_getid()
+        state.diff_winid = diff_winid
+    endif
+
+    var diff_bufnr: number = buffer.InitCurrentScratch('gitu-diff', printf('[GitU:Diff: %s (%s)]', entry.file, entry.section))
+    state.diff_bufnr = diff_bufnr
+    nnoremap <buffer> <silent> q <cmd>close<CR>
+    buffer.SetLines(diff_bufnr, ['Loading diff...'])
+
+    var args: list<string> = BuildDiffArgs(entry.section, entry.file)
+    git.Run(args, {
+        cwd: state.cwd,
+        task_key: 'gitu_status_diff_' .. key,
+        on_exit: (res: dict<any>) => {
+            if !has_key(views, key)
+                return
+            endif
+            var cur_state = views[key]
+            # Constraint: git diff exits with 1 when differences are found.
+            if res.status != 0 && res.status != 1
+                var err_lines = empty(res.stderr) ? ['Failed to load diff.'] : res.stderr
+                buffer.SetLines(cur_state.diff_bufnr, err_lines)
+                return
+            endif
+
+            var lines: list<string> = empty(res.stdout) ? ['(No diff change)'] : res.stdout
+            buffer.SetLines(cur_state.diff_bufnr, lines)
+            if cur_state.diff_winid > 0 && win_id2win(cur_state.diff_winid) > 0
+                win_execute(cur_state.diff_winid, 'normal! gg0')
+            endif
+        },
+    })
+enddef
+
 export def OnBufWipeout()
     var view_id: number = GetCurrentViewId()
     var key: string = GetViewKey(view_id)
     if has_key(views, key)
         git.StopByKey('gitu_status_' .. key)
         git.StopByKey('gitu_status_action_' .. key)
+        git.StopByKey('gitu_status_diff_' .. key)
         remove(views, key)
     endif
 enddef

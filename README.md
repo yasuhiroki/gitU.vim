@@ -8,6 +8,7 @@ A Vim plugin for Git operations, written in Vim9 script.
 - **Interactive Git Status (`:GitUStatus` / `:GitU`)**: Fast overview of staged, unstaged, and untracked files.
   - `<<`: Stage file (`git add`)
   - `>>`: Unstage file (`git restore --staged`)
+  - `dd`: View diff of the file under cursor
   - `pp`: 3-way vertical patch editor (`git add -p` / edit mode)
 - **3-Way Vertical Patch Editor**: Displays `HEAD`, `STAGE`, and `CURRENT` side-by-side in Vim diff mode. Directly updates the Git index on `:w`.
 - **Asynchronous Execution**: Git commands run asynchronously without freezing the editor.
@@ -42,6 +43,7 @@ A Vim plugin for Git operations, written in Vim9 script.
 #### Within `:GitUStatus` buffer:
 - `<<`: Stage the file under cursor (`git add`)
 - `>>`: Unstage the file under cursor (`git restore --staged`)
+- `dd`: View diff of the file under cursor
 - `pp`: Open 3-way vertical patch editor (`HEAD` | `STAGE` | `CURRENT`)
 - `u`: Update / refresh the status view
 - `q`: Close the status view

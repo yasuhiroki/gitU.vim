@@ -20,6 +20,7 @@ nnoremap <buffer> <silent> q <ScriptCmd>status.Close()<CR>
 nnoremap <buffer> <silent> u <ScriptCmd>status.Refresh()<CR>
 nnoremap <buffer> <silent> << <ScriptCmd>status.StageCurrent()<CR>
 nnoremap <buffer> <silent> >> <ScriptCmd>status.UnstageCurrent()<CR>
+nnoremap <buffer> <silent> dd <ScriptCmd>status.OpenDiff()<CR>
 nnoremap <buffer> <silent> pp <ScriptCmd>status.OpenPatchEdit()<CR>
 
 augroup GitUStatusBuffer

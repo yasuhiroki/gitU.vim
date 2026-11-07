@@ -60,9 +60,16 @@ def TestRenderStatus()
     assert_equal('nothing to commit, working tree clean', clean.lines[2])
 enddef
 
+def TestBuildDiffArgs()
+    assert_equal(['diff', '--cached', '--', 'foo.txt'], status.BuildDiffArgs('staged', 'foo.txt'))
+    assert_equal(['diff', '--', 'bar.txt'], status.BuildDiffArgs('unstaged', 'bar.txt'))
+    assert_equal(['diff', '--no-index', '--', '/dev/null', 'baz.txt'], status.BuildDiffArgs('untracked', 'baz.txt'))
+enddef
+
 def RunAll()
     TestParsePorcelain()
     TestRenderStatus()
+    TestBuildDiffArgs()
 
     var errors = v:errors
     if len(errors) > 0

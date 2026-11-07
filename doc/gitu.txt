@@ -26,7 +26,8 @@ inside Vim.
 Key Features:
 - 3-pane interactive Git log viewer (:GitULog).
 - Interactive Git status view (:GitUStatus / :GitU) with instant staging
-  (`<<`), unstaging (`>>`), and 3-way vertical patch editing (`pp`).
+  (`<<`), unstaging (`>>`), diff preview (`dd`), and 3-way vertical patch
+  editing (`pp`).
 - 3-way patch editor (HEAD | STAGE | CURRENT) directly editing the Git index.
 - Asynchronous execution via Vim9 jobs to keep the editor responsive.
 - Buffer-local keymaps and dedicated filetypes with syntax highlighting.
@@ -77,6 +78,7 @@ In the :GitUStatus view, files are grouped into sections:
 Key Mappings in status buffer:
     <<                  Stage the file under cursor (`git add`).
     >>                  Unstage the file under cursor (`git restore --staged`).
+    dd                  Open diff preview for the file under cursor.
     pp                  Open 3-way vertical patch editor (`git add -p`).
     u                   Update / refresh the status view.
     q                   Close the status view.

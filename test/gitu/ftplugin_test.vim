@@ -52,6 +52,10 @@ def TestStatusKeymaps()
     assert_false(empty(map_unstage))
     assert_match('status\.UnstageCurrent()', map_unstage.rhs)
 
+    var map_diff = maparg('dd', 'n', false, true)
+    assert_false(empty(map_diff))
+    assert_match('status\.OpenDiff()', map_diff.rhs)
+
     var map_patch = maparg('pp', 'n', false, true)
     assert_false(empty(map_patch))
     assert_match('status\.OpenPatchEdit()', map_patch.rhs)
