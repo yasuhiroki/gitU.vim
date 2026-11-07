@@ -34,6 +34,26 @@ def TestComplete()
     assert_equal(['--branches'], filtered)
 enddef
 
+def TestStripTrailingWhitespace()
+    var input = [
+        '* 1234567 feat: commit   ',
+        '| \\  ',
+        "|/ \t ",
+        'clean line',
+        '',
+        '   ',
+    ]
+    var expected = [
+        '* 1234567 feat: commit',
+        '| \\',
+        '|/',
+        'clean line',
+        '',
+        '',
+    ]
+    assert_equal(expected, log.StripTrailingWhitespace(input))
+enddef
+
 def TestCommitPanelHeight()
     &lines = 50
     unlet! g:gitu_commit_height
@@ -73,6 +93,7 @@ def RunAll()
     TestExtractCommitHash()
     TestExtractFilePath()
     TestComplete()
+    TestStripTrailingWhitespace()
     TestCommitPanelHeight()
 
     var errors = v:errors

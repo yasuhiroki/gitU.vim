@@ -32,6 +32,10 @@ export def ExtractFilePath(line: string): string
     return matchstr(line, '^[MADTU]\t\zs.\+$')
 enddef
 
+export def StripTrailingWhitespace(lines: list<string>): list<string>
+    return mapnew(lines, (_, line: string): string => substitute(line, '\s\+$', '', ''))
+enddef
+
 def ResetWindowTop(winid: number)
     if winid > 0 && win_id2win(winid) > 0
         win_execute(winid, 'normal! gg0')
@@ -148,11 +152,12 @@ def LoadLog(view_id: number)
                 return
             endif
 
-            buffer.SetLines(cur_state.log_bufnr, res.stdout)
+            var log_lines: list<string> = StripTrailingWhitespace(res.stdout)
+            buffer.SetLines(cur_state.log_bufnr, log_lines)
 
             var first_commit_lnum: number = 1
-            for idx in range(len(res.stdout))
-                if ExtractCommitHash(res.stdout[idx]) != ''
+            for idx in range(len(log_lines))
+                if ExtractCommitHash(log_lines[idx]) != ''
                     first_commit_lnum = idx + 1
                     break
                 endif
@@ -162,7 +167,7 @@ def LoadLog(view_id: number)
                 win_execute(cur_state.log_winid, 'normal! ' .. string(first_commit_lnum) .. 'G0')
             endif
 
-            var first_hash: string = ExtractCommitHash(res.stdout[first_commit_lnum - 1])
+            var first_hash: string = ExtractCommitHash(log_lines[first_commit_lnum - 1])
             if first_hash != ''
                 cur_state.current_hash = first_hash
                 cur_state.current_file = ''
