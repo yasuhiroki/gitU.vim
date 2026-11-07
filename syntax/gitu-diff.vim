@@ -11,11 +11,20 @@ syntax match GitUDiffMeta /^\(index\|new file mode\|deleted file mode\|similarit
 syntax match GitUDiffHeader /^\(---\|+++\) .*$/
 syntax match GitUDiffHunk /^@@.*@@.*$/
 
-highlight default link GitUDiffAdded DiffAdd
-highlight default link GitUDiffRemoved DiffDelete
-highlight default link GitUDiffFile Title
-highlight default link GitUDiffMeta Comment
-highlight default link GitUDiffHeader PreProc
-highlight default link GitUDiffHunk Special
+highlight default link GitUDiffAdded diffAdded
+highlight default link GitUDiffRemoved diffRemoved
+highlight default link GitUDiffChanged diffChanged
+highlight default link GitUDiffFile diffFile
+highlight default link GitUDiffMeta diffIndexLine
+highlight default link GitUDiffHeader diffSubname
+highlight default link GitUDiffHunk diffLine
+
+highlight default link diffAdded Statement
+highlight default link diffRemoved Special
+highlight default link diffChanged Type
+highlight default link diffFile Type
+highlight default link diffLine Identifier
+highlight default link diffIndexLine PreProc
+highlight default link diffSubname PreProc
 
 b:current_syntax = 'gitu-diff'
