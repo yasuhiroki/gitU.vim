@@ -89,12 +89,42 @@ def TestCommitPanelHeight()
     unlet! g:gitu_commit_height
 enddef
 
+def TestYankCommitHash()
+    setreg('"', 'initial')
+    var res = log.YankCommitHash('* 0d3ed9f docs: update README')
+    assert_equal('0d3ed9f', res)
+    assert_equal('0d3ed9f', getreg('"'))
+
+    # Empty / non-commit line
+    setreg('"', 'preserved')
+    var empty_res = log.YankCommitHash('| /')
+    assert_equal('', empty_res)
+    assert_equal('preserved', getreg('"'))
+
+    # Clipboard sync
+    var orig_cb = &clipboard
+    &clipboard = 'unnamed,unnamedplus'
+    log.YankCommitHash('* a1b2c3d feat: something')
+    assert_equal('a1b2c3d', getreg('"'))
+    assert_equal('a1b2c3d', getreg('*'))
+    assert_equal('a1b2c3d', getreg('+'))
+    &clipboard = orig_cb
+
+    # From current buffer line
+    enew
+    setline(1, '* 9876543 fix: bug')
+    assert_equal('9876543', log.YankCommitHash())
+    assert_equal('9876543', getreg('"'))
+    bwipeout!
+enddef
+
 def RunAll()
     TestExtractCommitHash()
     TestExtractFilePath()
     TestComplete()
     TestStripTrailingWhitespace()
     TestCommitPanelHeight()
+    TestYankCommitHash()
 
     var errors = v:errors
     if len(errors) > 0

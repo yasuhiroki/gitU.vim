@@ -129,6 +129,7 @@ Key Mappings in :GitULog:
 In the [GitU:Log] pane:
     j / k               Navigate commits. Moving the cursor automatically
                         updates the commit detail and diff panes.
+    yy                  Copy (yank) commit hash of the line under cursor.
     <CR>                Force update details and diff for commit under cursor.
 
 In the [GitU:Commit] pane:

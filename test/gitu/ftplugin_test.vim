@@ -10,6 +10,11 @@ def TestLogKeymaps()
     assert_false(empty(map_u))
     assert_match('log\.Refresh()', map_u.rhs)
     assert_equal(1, map_u.buffer)
+
+    var map_yy = maparg('yy', 'n', false, true)
+    assert_false(empty(map_yy))
+    assert_match('log\.YankCommitHash()', map_yy.rhs)
+    assert_equal(1, map_yy.buffer)
     bwipeout!
 enddef
 

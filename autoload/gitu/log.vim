@@ -336,6 +336,31 @@ export def SelectCommitItem()
     endif
 enddef
 
+export def YankCommitHash(line_str: string = ''): string
+    var target_line: string = (line_str != '') ? line_str : getline('.')
+    var hash: string = ExtractCommitHash(target_line)
+    if hash == ''
+        echohl WarningMsg
+        echomsg 'No commit hash on current line'
+        echohl None
+        return ''
+    endif
+
+    var reg: string = v:register
+    setreg(reg, hash)
+    if reg == '"'
+        if &clipboard =~# 'unnamedplus'
+            setreg('+', hash)
+        endif
+        if &clipboard =~# 'unnamed'
+            setreg('*', hash)
+        endif
+    endif
+
+    echomsg 'Copied ' .. hash
+    return hash
+enddef
+
 export def OnBufWipeout()
     var view_id: number = GetCurrentViewId()
     var key: string = GetViewKey(view_id)
