@@ -6,7 +6,6 @@ def TestSaveStageBuffer()
     var temp_dir = tempname() .. '_gitu_test_repo'
     mkdir(temp_dir, 'p')
 
-    # Initialize a temporary git repository
     system('git -C ' .. fnameescape(temp_dir) .. ' init -b main')
     system('git -C ' .. fnameescape(temp_dir) .. ' config user.name "Test"')
     system('git -C ' .. fnameescape(temp_dir) .. ' config user.email "test@example.com"')
@@ -16,17 +15,14 @@ def TestSaveStageBuffer()
     system('git -C ' .. fnameescape(temp_dir) .. ' add sample.txt')
     system('git -C ' .. fnameescape(temp_dir) .. ' commit -m "initial"')
 
-    # Modify the working file
     writefile(['line 1 modified', 'line 2'], file_path)
 
-    # Simulate staging buffer with new content
     enew
     var stage_bufnr = bufnr('%')
     setline(1, ['line 1 modified', 'line 2 with staged edit'])
 
     stage.SaveStageBuffer(temp_dir, 'sample.txt', stage_bufnr)
 
-    # Check that stage content in git index matches the buffer
     var stage_out = trim(system('git -C ' .. fnameescape(temp_dir) .. ' show :sample.txt'))
     var expected = "line 1 modified\nline 2 with staged edit"
     assert_equal(expected, stage_out)
@@ -36,8 +32,49 @@ def TestSaveStageBuffer()
     delete(temp_dir, 'rf')
 enddef
 
+def TestOpen3Way()
+    var temp_dir = tempname() .. '_gitu_test_3way'
+    mkdir(temp_dir, 'p')
+
+    system('git -C ' .. fnameescape(temp_dir) .. ' init -b main')
+    system('git -C ' .. fnameescape(temp_dir) .. ' config user.name "Test"')
+    system('git -C ' .. fnameescape(temp_dir) .. ' config user.email "test@example.com"')
+
+    var file_path = temp_dir .. '/test.txt'
+    writefile(['base content'], file_path)
+    system('git -C ' .. fnameescape(temp_dir) .. ' add test.txt')
+    system('git -C ' .. fnameescape(temp_dir) .. ' commit -m "base"')
+
+    writefile(['worktree content'], file_path)
+
+    var callback_called = false
+    stage.Open3Way(temp_dir, 'test.txt', () => {
+        callback_called = true
+    })
+
+    # Should have 3 windows in the new tab
+    assert_equal(3, winnr('$'))
+
+    # Active window should be the center STAGE panel
+    assert_match('\[GitU:STAGE: test\.txt\]$', bufname('%'))
+
+    # Edit STAGE buffer and save
+    setline(1, 'staged content')
+    write
+
+    var staged_out = trim(system('git -C ' .. fnameescape(temp_dir) .. ' show :test.txt'))
+    assert_equal('staged content', staged_out)
+
+    # Close 3way
+    stage.Close3Way()
+    assert_true(callback_called)
+
+    delete(temp_dir, 'rf')
+enddef
+
 def RunAll()
     TestSaveStageBuffer()
+    TestOpen3Way()
 
     var errors = v:errors
     if len(errors) > 0

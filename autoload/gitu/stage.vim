@@ -1,7 +1,6 @@
 vim9script
 
 import autoload 'gitu/buffer.vim'
-import autoload 'gitu/stage.vim'
 
 def GetIndexMode(repo_root: string, rel_file_path: string): string
     var out: string = system('git -C ' .. fnameescape(repo_root) .. ' ls-files --stage -- ' .. fnameescape(rel_file_path))
@@ -53,16 +52,17 @@ export def OnBufWrite()
     endif
 enddef
 
-export def Close3Way(OnClose: any)
+export def Close3Way()
     diffoff!
+    var Callback: any = get(t:, 'gitu_on_close', null)
     if tabpagenr('$') > 1
         tabclose
     else
         silent! only
         enew
     endif
-    if type(OnClose) == v:t_func
-        OnClose()
+    if type(Callback) == v:t_func
+        Callback()
     endif
 enddef
 
@@ -88,13 +88,14 @@ export def Open3Way(repo_root: string, rel_file_path: string, OnClose: any = nul
     endif
 
     tabnew
+    t:gitu_on_close = OnClose
 
     # Panel 1 (Left): HEAD
     var head_bufnr: number = buffer.InitCurrentScratch('gitu-stage-head', '[GitU:HEAD: ' .. rel_file_path .. ']')
     buffer.SetLines(head_bufnr, head_lines)
     setlocal nomodifiable
     diffthis
-    nnoremap <buffer> <silent> q <ScriptCmd>stage.Close3Way(OnClose)<CR>
+    nnoremap <buffer> <silent> q <ScriptCmd>Close3Way()<CR>
 
     # Panel 2 (Center): STAGE
     rightbelow vnew
@@ -114,16 +115,16 @@ export def Open3Way(repo_root: string, rel_file_path: string, OnClose: any = nul
 
     augroup GitUStageSave
         autocmd! * <buffer>
-        autocmd BufWriteCmd <buffer> stage.OnBufWrite()
+        autocmd BufWriteCmd <buffer> OnBufWrite()
     augroup END
 
-    nnoremap <buffer> <silent> q <ScriptCmd>stage.Close3Way(OnClose)<CR>
+    nnoremap <buffer> <silent> q <ScriptCmd>Close3Way()<CR>
 
     # Panel 3 (Right): CURRENT (Worktree file)
     rightbelow vnew
     execute 'edit ' .. fnameescape(full_path)
     diffthis
-    nnoremap <buffer> <silent> q <ScriptCmd>stage.Close3Way(OnClose)<CR>
+    nnoremap <buffer> <silent> q <ScriptCmd>Close3Way()<CR>
 
     # Focus Center (STAGE) panel
     win_gotoid(stage_winid)
