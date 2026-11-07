@@ -56,11 +56,13 @@ Vim 8/9 packages: >
 
 :GitULog [args]                                                    *:GitULog*
     Opens the 3-pane interactive Git log viewer in a new tab page.
-    Pass any arguments accepted by `git log`: >
+    Pass any arguments accepted by `git log`, or pass a search pattern to
+    filter commits matching patch differences (`git log -G <pattern>`): >
         :GitULog
         :GitULog --all
         :GitULog --first-parent
         :GitULog -n 50
+        :GitULog <pattern>
 <   Command completion is available for common Git options.
 
 :GitUStatus                                                      *:GitUStatus*

@@ -58,11 +58,13 @@ Vim 8/9 packages: >
 
 :GitULog [args]                                                    *:GitULog*
     新しいタブページに 3 ペインの Git ログビューアを開きます。
-    `git log` に渡せる任意の引数を指定可能です: >
+    `git log` に渡せる任意の引数を指定可能です。また、検索パターンを指定
+    して差分マッチによるコミット絞り込み (`git log -G <pattern>`) も行えます: >
         :GitULog
         :GitULog --all
         :GitULog --first-parent
         :GitULog -n 50
+        :GitULog <pattern>
 <   一般的な Git オプションのコマンドライン補完が利用可能です。
 
 :GitUStatus                                                      *:GitUStatus*

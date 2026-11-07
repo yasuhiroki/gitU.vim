@@ -25,6 +25,7 @@ A Vim plugin for Git operations, written in Vim9 script.
 " Open 3-pane interactive Git log viewer
 :GitULog
 :GitULog --all
+:GitULog <pattern>       " Filter commits matching diff pattern (-G)
 
 " Open interactive Git status
 :GitUStatus

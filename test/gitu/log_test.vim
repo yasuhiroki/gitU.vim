@@ -29,9 +29,66 @@ def TestComplete()
     var all = log.Complete('', 'GitULog ', 8)
     assert_true(index(all, '--all') >= 0)
     assert_true(index(all, '--branches') >= 0)
+    assert_true(index(all, '-G') >= 0)
+    assert_true(index(all, '-S') >= 0)
 
     var filtered = log.Complete('--b', 'GitULog --b', 11)
     assert_equal(['--branches'], filtered)
+enddef
+
+def TestFormatCommitDetail()
+    # Case 1: No empty line before '--- Files ---'
+    var input1 = [
+        'Commit: 1234567',
+        'Author: test',
+        '',
+        'commit message title',
+        '--- Files ---',
+        "M\tsample.txt"
+    ]
+    var expected1 = [
+        'Commit: 1234567',
+        'Author: test',
+        '',
+        'commit message title',
+        '',
+        '--- Files ---',
+        "M\tsample.txt"
+    ]
+    assert_equal(expected1, log.FormatCommitDetail(input1))
+
+    # Case 2: Already one empty line
+    assert_equal(expected1, log.FormatCommitDetail(expected1))
+
+    # Case 3: Multiple empty lines before '--- Files ---'
+    var input3 = [
+        'Commit: 1234567',
+        'Author: test',
+        '',
+        'commit message title',
+        '',
+        '   ',
+        '',
+        '--- Files ---',
+        "M\tsample.txt"
+    ]
+    assert_equal(expected1, log.FormatCommitDetail(input3))
+
+    # Case 4: No '--- Files ---'
+    var input4 = ['line 1', 'line 2']
+    assert_equal(input4, log.FormatCommitDetail(input4))
+enddef
+
+def TestNormalizeArgs()
+    assert_equal(['-GYankCommitHash'], log.NormalizeArgs(['YankCommitHash']))
+    assert_equal(['-Gfoo bar'], log.NormalizeArgs(['foo', 'bar']))
+    assert_equal(['--all', '-Gmy_func'], log.NormalizeArgs(['--all', 'my_func']))
+    assert_equal(['-n', '20', '-Gmy_func'], log.NormalizeArgs(['-n', '20', 'my_func']))
+    assert_equal(['--branches'], log.NormalizeArgs(['--branches']))
+    assert_equal(['-G', 'existing'], log.NormalizeArgs(['-G', 'existing']))
+    assert_equal(['-Gexisting'], log.NormalizeArgs(['-Gexisting']))
+    assert_equal(['-S', 'pickaxe'], log.NormalizeArgs(['-S', 'pickaxe']))
+    assert_equal([], log.NormalizeArgs([]))
 enddef
 
 def TestStripTrailingWhitespace()
@@ -125,6 +182,8 @@ def RunAll()
     TestStripTrailingWhitespace()
     TestCommitPanelHeight()
     TestYankCommitHash()
+    TestFormatCommitDetail()
+    TestNormalizeArgs()
 
     var errors = v:errors
     if len(errors) > 0
