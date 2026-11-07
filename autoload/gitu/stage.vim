@@ -63,14 +63,15 @@ export def Close3Way()
 
     diffoff!
 
-    for wid in [session.head_winid, session.stage_winid, session.current_winid]
-        if wid > 0 && win_id2win(wid) > 0
-            win_execute(wid, 'close!')
-        endif
-    endfor
-
     if session.status_winid > 0 && win_id2win(session.status_winid) > 0
         win_gotoid(session.status_winid)
+        silent! only
+    else
+        for wid in [session.head_winid, session.stage_winid, session.current_winid]
+            if wid > 0 && win_id2win(wid) > 0
+                win_execute(wid, 'close!')
+            endif
+        endfor
     endif
 
     if type(session.OnClose) == v:t_func
@@ -101,10 +102,15 @@ export def Open3Way(repo_root: string, rel_file_path: string, status_winid: numb
         stage_lines = ['']
     endif
 
+    # Clean up any extraneous windows in the status tab
+    if status_winid > 0 && win_id2win(status_winid) > 0
+        win_gotoid(status_winid)
+        silent! only
+    endif
+
     var status_height: number = get(g:, 'gitu_status_height', 15)
     if status_height > 0 && status_winid > 0 && win_id2win(status_winid) > 0
         setwinvar(status_winid, '&winfixheight', 1)
-        win_execute(status_winid, 'resize ' .. string(status_height))
     endif
 
     # Panel 1 (Left): HEAD
@@ -147,7 +153,6 @@ export def Open3Way(repo_root: string, rel_file_path: string, status_winid: numb
     nnoremap <buffer> <silent> q <ScriptCmd>Close3Way()<CR>
 
     if status_height > 0 && status_winid > 0 && win_id2win(status_winid) > 0
-        setwinvar(status_winid, '&winfixheight', 1)
         win_execute(status_winid, 'resize ' .. string(status_height))
     endif
 
