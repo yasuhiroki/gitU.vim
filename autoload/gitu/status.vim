@@ -256,6 +256,25 @@ export def StageCurrent()
     })
 enddef
 
+def FallbackReset(key: string, cwd: string, file: string)
+    git.Run(['reset', 'HEAD', '--', file], {
+        cwd: cwd,
+        task_key: 'gitu_status_action_' .. key,
+        on_exit: (res: dict<any>) => {
+            if !has_key(views, key)
+                return
+            endif
+            if res.status != 0
+                echohl ErrorMsg
+                echomsg 'Failed to unstage ' .. file .. ': ' .. join(res.stderr, ' ')
+                echohl None
+                return
+            endif
+            Refresh()
+        },
+    })
+enddef
+
 export def UnstageCurrent()
     var view_id: number = GetCurrentViewId()
     var key: string = GetViewKey(view_id)
@@ -281,22 +300,7 @@ export def UnstageCurrent()
                 return
             endif
             if res.status != 0
-                git.Run(['reset', 'HEAD', '--', entry.file], {
-                    cwd: state.cwd,
-                    task_key: 'gitu_status_action_' .. key,
-                    on_exit: (res2: dict<any>) => {
-                        if !has_key(views, key)
-                            return
-                        endif
-                        if res2.status != 0
-                            echohl ErrorMsg
-                            echomsg 'Failed to unstage ' .. entry.file .. ': ' .. join(res2.stderr, ' ')
-                            echohl None
-                            return
-                        endif
-                        Refresh()
-                    },
-                })
+                FallbackReset(key, state.cwd, entry.file)
                 return
             endif
             Refresh()
