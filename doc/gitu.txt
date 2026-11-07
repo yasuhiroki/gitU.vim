@@ -1,0 +1,56 @@
+*gitu.txt*	Git operations plugin for Vim
+
+Author: yasuhiroki
+License: MIT License
+
+==============================================================================
+CONTENTS                                                       *gitu-contents*
+
+    1. Overview ............................................... |gitu-overview|
+    2. Commands ............................................... |gitu-commands|
+    3. Panes and Keymaps ...................................... |gitu-keymaps|
+    4. Options ................................................ |gitu-options|
+
+==============================================================================
+1. OVERVIEW                                                    *gitu-overview*
+
+gitU.vim provides interactive Git operations within Vim, written in Vim9 script.
+
+Features:
+- 3-pane interactive git log viewer (:GitULog), inspired by gitk / tig.
+- Non-blocking asynchronous Git execution.
+- Dedicated filetypes and syntax highlighting for log graph, commit info,
+  and diff buffers.
+
+==============================================================================
+2. COMMANDS                                                    *gitu-commands*
+
+:GitULog [args]                                                    *:GitULog*
+    Opens the 3-pane interactive Git log viewer in a new tab page.
+    Accepts arbitrary git log arguments (e.g. `--all`, `--first-parent`).
+
+==============================================================================
+3. PANES AND KEYMAPS                                            *gitu-keymaps*
+
+The :GitULog view consists of three panes:
+    - Left:         gitu-log    (Git commit graph)
+    - Top-Right:    gitu-commit (Commit details, message, and changed files)
+    - Bottom-Right: gitu-diff   (Unified diff of commit or selected file)
+
+Key Mappings (Buffer-local):
+    q               Close the GitU view and cancel background jobs.
+    r               Refresh the commit log and views.
+    <Tab>           Cycle focus forward across panes.
+    <S-Tab>         Cycle focus backward across panes.
+    <CR> (in log)   Force update details and diff for commit under cursor.
+    <CR> (in commit) Jump to diff pane for the file under cursor.
+
+==============================================================================
+4. FILETYPES                                                   *gitu-filetypes*
+
+    gitu-log        Commit graph view.
+    gitu-commit     Commit metadata and changed file list.
+    gitu-diff       Diff view.
+
+==============================================================================
+vim:tw=78:ts=8:ft=help:norl:
