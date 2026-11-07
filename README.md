@@ -27,7 +27,7 @@ A Vim plugin for Git operations, written in Vim9 script.
 
 Within `:GitULog` panes:
 - `q`: Close the GitU view and cancel background jobs
-- `r`: Refresh the log view
+- `u`: Update / refresh the view
 - `<Tab>` / `<S-Tab>`: Cycle focus across panes
 - `<CR>` (in log pane): Inspect commit under cursor
 - `<CR>` (in commit pane): Jump to diff of the selected file

@@ -75,7 +75,7 @@ The :GitULog view consists of three synchronized panes:
 
 Key Mappings (Buffer-local):
     q                   Close the GitU view and cancel background jobs.
-    r                   Refresh the current view.
+    u                   Update / refresh the current view.
     <Tab>               Cycle focus forward across panes.
     <S-Tab>             Cycle focus backward across panes.
 
