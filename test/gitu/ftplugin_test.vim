@@ -44,11 +44,11 @@ def TestStatusKeymaps()
     assert_false(empty(map_u))
     assert_match('status\.Refresh()', map_u.rhs)
 
-    var map_stage = maparg('>>', 'n', false, true)
+    var map_stage = maparg('<<', 'n', false, true)
     assert_false(empty(map_stage))
     assert_match('status\.StageCurrent()', map_stage.rhs)
 
-    var map_unstage = maparg('<<', 'n', false, true)
+    var map_unstage = maparg('>>', 'n', false, true)
     assert_false(empty(map_unstage))
     assert_match('status\.UnstageCurrent()', map_unstage.rhs)
 
