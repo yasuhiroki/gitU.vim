@@ -198,6 +198,11 @@ export def Open(...extra_args: list<string>)
     var diff_bufnr: number = buffer.InitCurrentScratch('gitu-diff', '[GitU:Diff #' .. key .. ']')
     b:gitu_view_id = view_id
 
+    var commit_height: number = get(g:, 'gitu_commit_height', 15)
+    if commit_height > 0
+        win_execute(commit_winid, 'resize ' .. string(commit_height))
+    endif
+
     win_gotoid(log_winid)
 
     views[key] = {

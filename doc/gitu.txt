@@ -10,6 +10,7 @@ CONTENTS                                                       *gitu-contents*
     2. Commands ............................................... |gitu-commands|
     3. Panes and Keymaps ...................................... |gitu-keymaps|
     4. Options ................................................ |gitu-options|
+    5. Filetypes .............................................. |gitu-filetypes|
 
 ==============================================================================
 1. OVERVIEW                                                    *gitu-overview*
@@ -46,7 +47,14 @@ Key Mappings (Buffer-local):
     <CR> (in commit) Jump to diff pane for the file under cursor.
 
 ==============================================================================
-4. FILETYPES                                                   *gitu-filetypes*
+4. OPTIONS                                                     *gitu-options*
+
+g:gitu_commit_height                                    *g:gitu_commit_height*
+    Height (in rows) of the top-right commit detail pane in the :GitULog view.
+    Default: 15
+
+==============================================================================
+5. FILETYPES                                                   *gitu-filetypes*
 
     gitu-log        Commit graph view.
     gitu-commit     Commit metadata and changed file list.

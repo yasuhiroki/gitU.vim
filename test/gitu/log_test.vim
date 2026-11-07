@@ -34,10 +34,46 @@ def TestComplete()
     assert_equal(['--branches'], filtered)
 enddef
 
+def TestCommitPanelHeight()
+    &lines = 50
+    unlet! g:gitu_commit_height
+
+    log.Open()
+    var tab_nr: number = tabpagenr()
+    var commit_winid: number = -1
+    for winnr in range(1, tabpagewinnr(tab_nr, '$'))
+        var wid: number = win_getid(winnr, tab_nr)
+        if getwinvar(wid, '&filetype') == 'gitu-commit'
+            commit_winid = wid
+            break
+        endif
+    endfor
+    assert_true(commit_winid > 0)
+    assert_equal(15, winheight(commit_winid))
+    log.Close()
+
+    g:gitu_commit_height = 20
+    log.Open()
+    tab_nr = tabpagenr()
+    commit_winid = -1
+    for winnr in range(1, tabpagewinnr(tab_nr, '$'))
+        var wid: number = win_getid(winnr, tab_nr)
+        if getwinvar(wid, '&filetype') == 'gitu-commit'
+            commit_winid = wid
+            break
+        endif
+    endfor
+    assert_true(commit_winid > 0)
+    assert_equal(20, winheight(commit_winid))
+    log.Close()
+    unlet! g:gitu_commit_height
+enddef
+
 def RunAll()
     TestExtractCommitHash()
     TestExtractFilePath()
     TestComplete()
+    TestCommitPanelHeight()
 
     var errors = v:errors
     if len(errors) > 0

@@ -32,6 +32,13 @@ Within `:GitULog` panes:
 - `<CR>` (in log pane): Inspect commit under cursor
 - `<CR>` (in commit pane): Jump to diff of the selected file
 
+## Configuration
+
+```vim
+" Height (in rows) of the top-right commit detail pane (default: 15)
+let g:gitu_commit_height = 15
+```
+
 ## License
 
 [MIT License](./LICENSE)
