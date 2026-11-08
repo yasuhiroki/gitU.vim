@@ -56,7 +56,7 @@ export def ParseLinePorcelain(lines: list<string>): dict<any>
             }
 
             var date_str = cur_entry.date != '' ? cur_entry.date : '0000-00-00 00:00'
-            var blame_line = printf('%s (%s) <%s> %s', cur_entry.short_hash, date_str, cur_entry.author, cur_entry.summary)
+            var blame_line = printf('%s %s <%s>', date_str, cur_entry.summary, cur_entry.author)
             add(entries, cur_entry)
             add(blame_lines, blame_line)
             add(file_lines, cur_entry.content)

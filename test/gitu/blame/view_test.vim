@@ -63,8 +63,8 @@ def TestBlameOpenAndHistoryNavigation()
         var blame_lines = getbufline(state.blame_bufnr, 1, '$')
         var file_lines = getbufline(state.file_bufnr, 1, '$')
         assert_equal(['line1_v3', 'line2_v2'], file_lines)
-        assert_match('^' .. hash3[0 : 6], blame_lines[0])
-        assert_match('^' .. hash2[0 : 6], blame_lines[1])
+        assert_match('^\d\{4\}-\d\{2\}-\d\{2\} \d\{2\}:\d\{2\} commit 3 <TestUser>$', blame_lines[0])
+        assert_match('^\d\{4\}-\d\{2\}-\d\{2\} \d\{2\}:\d\{2\} commit 2 <TestUser>$', blame_lines[1])
 
         # Verify detail window loaded commit 3 and diff
         ok = WaitFor((): bool => len(filter(getbufline(state.detail_bufnr, 1, '$'), (_, l: string): bool => stridx(l, 'commit 3') >= 0)) > 0, 3000)
@@ -87,8 +87,8 @@ def TestBlameOpenAndHistoryNavigation()
         blame_lines = getbufline(state.blame_bufnr, 1, '$')
         file_lines = getbufline(state.file_bufnr, 1, '$')
         assert_equal(['line1_v1', 'line2_v2'], file_lines)
-        assert_match('^' .. hash1[0 : 6], blame_lines[0])
-        assert_match('^' .. hash2[0 : 6], blame_lines[1])
+        assert_match('^\d\{4\}-\d\{2\}-\d\{2\} \d\{2\}:\d\{2\} commit 1 <TestUser>$', blame_lines[0])
+        assert_match('^\d\{4\}-\d\{2\}-\d\{2\} \d\{2\}:\d\{2\} commit 2 <TestUser>$', blame_lines[1])
 
         # Detail should reflect commit 1 on line 1
         ok = WaitFor((): bool => len(filter(getbufline(state.detail_bufnr, 1, '$'), (_, l: string): bool => stridx(l, 'commit 1') >= 0)) > 0, 3000)
@@ -104,8 +104,8 @@ def TestBlameOpenAndHistoryNavigation()
         blame_lines = getbufline(state.blame_bufnr, 1, '$')
         file_lines = getbufline(state.file_bufnr, 1, '$')
         assert_equal(['line1_v1', 'line2_v1'], file_lines)
-        assert_match('^' .. hash1[0 : 6], blame_lines[0])
-        assert_match('^' .. hash1[0 : 6], blame_lines[1])
+        assert_match('^\d\{4\}-\d\{2\}-\d\{2\} \d\{2\}:\d\{2\} commit 1 <TestUser>$', blame_lines[0])
+        assert_match('^\d\{4\}-\d\{2\}-\d\{2\} \d\{2\}:\d\{2\} commit 1 <TestUser>$', blame_lines[1])
 
         # C-o (HistoryBack) -> back to commit 2
         blame.HistoryBack()

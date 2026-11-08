@@ -57,7 +57,7 @@ def TestParseLinePorcelain()
     assert_equal('', res.entries[0].prev_hash)
     assert_true(res.entries[0].boundary)
     assert_equal('vim9script', res.file_lines[0])
-    assert_match('^1111111 (\d\{4\}-\d\{2\}-\d\{2\} \d\{2\}:\d\{2\}) <Alice> feat: initial commit$', res.blame_lines[0])
+    assert_match('^\d\{4\}-\d\{2\}-\d\{2\} \d\{2\}:\d\{2\} feat: initial commit <Alice>$', res.blame_lines[0])
 
     assert_equal('2222222', res.entries[1].short_hash)
     assert_equal('Bob', res.entries[1].author)
@@ -65,7 +65,7 @@ def TestParseLinePorcelain()
     assert_equal('1111111111111111111111111111111111111111', res.entries[1].prev_hash)
     assert_equal('src/old_main.vim', res.entries[1].prev_file)
     assert_equal('var x = 42', res.file_lines[1])
-    assert_match('^2222222 (\d\{4\}-\d\{2\}-\d\{2\} \d\{2\}:\d\{2\}) <Bob> fix: update second line$', res.blame_lines[1])
+    assert_match('^\d\{4\}-\d\{2\}-\d\{2\} \d\{2\}:\d\{2\} fix: update second line <Bob>$', res.blame_lines[1])
 enddef
 
 def RunAll()
