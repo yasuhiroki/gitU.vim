@@ -394,6 +394,8 @@ export def OpenPatchEdit()
 
     stage.Open3Way(state.cwd, entry.file, state.winid, () => {
         Refresh()
+    }, () => {
+        Refresh()
     })
 enddef
 

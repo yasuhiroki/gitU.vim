@@ -44,6 +44,10 @@ export def SaveStageBuffer(repo_root: string, rel_file_path: string, bufnr: numb
 
     setbufvar(bufnr, '&modified', 0)
     echomsg 'Staged: ' .. rel_file_path
+
+    if !empty(current_session) && type(get(current_session, 'OnSave', null)) == v:t_func
+        current_session.OnSave()
+    endif
 enddef
 
 export def OnBufWrite()
@@ -63,15 +67,17 @@ export def Close3Way()
 
     diffoff!
 
+    for wid in [session.head_winid, session.stage_winid, session.current_winid]
+        if wid > 0 && win_id2win(wid) > 0
+            win_execute(wid, 'diffoff')
+            win_execute(wid, 'close!')
+        endif
+    endfor
+
     if session.status_winid > 0 && win_id2win(session.status_winid) > 0
+        setwinvar(session.status_winid, '&winfixheight', 0)
         win_gotoid(session.status_winid)
         silent! only
-    else
-        for wid in [session.head_winid, session.stage_winid, session.current_winid]
-            if wid > 0 && win_id2win(wid) > 0
-                win_execute(wid, 'close!')
-            endif
-        endfor
     endif
 
     if type(session.OnClose) == v:t_func
@@ -79,7 +85,7 @@ export def Close3Way()
     endif
 enddef
 
-export def Open3Way(repo_root: string, rel_file_path: string, status_winid: number = -1, OnClose: any = null)
+export def Open3Way(repo_root: string, rel_file_path: string, status_winid: number = -1, OnClose: any = null, OnSave: any = null)
     var full_path: string = repo_root .. '/' .. rel_file_path
     if !filereadable(full_path)
         echohl ErrorMsg
@@ -140,6 +146,7 @@ export def Open3Way(repo_root: string, rel_file_path: string, status_winid: numb
     augroup GitUStageSave
         autocmd! * <buffer>
         autocmd BufWriteCmd <buffer> OnBufWrite()
+        autocmd BufWinLeave <buffer> Close3Way()
     augroup END
 
     nnoremap <buffer> <silent> q <ScriptCmd>Close3Way()<CR>
@@ -175,6 +182,7 @@ export def Open3Way(repo_root: string, rel_file_path: string, status_winid: numb
         stage_winid: stage_winid,
         current_winid: current_winid,
         OnClose: OnClose,
+        OnSave: OnSave,
     }
 
     # Focus Center (STAGE) panel

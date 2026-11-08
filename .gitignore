@@ -1,0 +1,13 @@
+# Vim help tags
+doc/tags
+doc/tags-??
+
+tmp/
+
+# Temporary & swap files
+*.sw[a-p]
+*.swo
+*.swp
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+*~
