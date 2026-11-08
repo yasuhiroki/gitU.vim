@@ -85,12 +85,116 @@ def LoadCommitDetail(view_id: number, hash: string)
     })
 enddef
 
+def FlushStreamLines(view_id: number)
+    var key = view.GetKey(view_id)
+    if !has_key(views, key)
+        return
+    endif
+    var state = views[key]
+    if empty(state.stream_pending)
+        return
+    endif
+
+    var lines = state.stream_pending
+    state.stream_pending = []
+
+    if !state.stream_started
+        state.stream_started = true
+        buffer.SetLines(state.log_bufnr, lines)
+        state.line_count = len(lines)
+
+        var first_commit_lnum = 1
+        for idx in range(len(lines))
+            var h = parser.ExtractCommitHash(lines[idx])
+            if h != ''
+                first_commit_lnum = idx + 1
+                state.current_hash = h
+                state.current_file = ''
+                LoadCommitDetail(view_id, h)
+                LoadCommitDiff(view_id, h, '')
+                break
+            endif
+        endfor
+
+        if state.log_winid > 0 && win_id2win(state.log_winid) > 0
+            win_execute(state.log_winid, 'normal! ' .. string(first_commit_lnum) .. 'G0')
+        endif
+    else
+        appendbufline(state.log_bufnr, state.line_count, lines)
+        state.line_count += len(lines)
+
+        if state.current_hash == ''
+            var all_lines = getbufline(state.log_bufnr, 1, state.line_count)
+            for idx in range(len(all_lines))
+                var h = parser.ExtractCommitHash(all_lines[idx])
+                if h != ''
+                    state.current_hash = h
+                    state.current_file = ''
+                    LoadCommitDetail(view_id, h)
+                    LoadCommitDiff(view_id, h, '')
+                    if state.log_winid > 0 && win_id2win(state.log_winid) > 0
+                        win_execute(state.log_winid, 'normal! ' .. string(idx + 1) .. 'G0')
+                    endif
+                    break
+                endif
+            endfor
+        endif
+    endif
+enddef
+
+def OnLogStdout(view_id: number, msgs: list<string>)
+    var key = view.GetKey(view_id)
+    if !has_key(views, key)
+        return
+    endif
+    var state = views[key]
+
+    for msg in msgs
+        add(state.stream_pending, substitute(msg, '\s\+$', '', ''))
+    endfor
+
+    var threshold = state.stream_started ? 100 : 30
+    if len(state.stream_pending) >= threshold
+        FlushStreamLines(view_id)
+    endif
+enddef
+
+def OnLogExit(view_id: number, res: dict<any>)
+    var key = view.GetKey(view_id)
+    if !has_key(views, key)
+        return
+    endif
+    var state = views[key]
+
+    if res.status != 0
+        if !state.stream_started
+            var err_lines: list<string> = empty(res.stderr) ? ['Failed to run git log.'] : res.stderr
+            buffer.SetLines(state.log_bufnr, err_lines)
+            buffer.SetLines(state.commit_bufnr, [])
+            buffer.SetLines(state.diff_bufnr, [])
+        endif
+        return
+    endif
+
+    FlushStreamLines(view_id)
+
+    if !state.stream_started || state.line_count == 0
+        buffer.SetLines(state.log_bufnr, ['(No commits found)'])
+        buffer.SetLines(state.commit_bufnr, [])
+        buffer.SetLines(state.diff_bufnr, [])
+    endif
+enddef
+
 def LoadLog(view_id: number)
     var key: string = view.GetKey(view_id)
     if !has_key(views, key)
         return
     endif
     var state = views[key]
+
+    state.stream_started = false
+    state.stream_pending = []
+    state.line_count = 0
 
     var args: list<string> = [
         'log',
@@ -102,49 +206,8 @@ def LoadLog(view_id: number)
     git.Run(args, {
         cwd: state.cwd,
         task_key: 'gitu_log_' .. key,
-        on_exit: (res: dict<any>) => {
-            if !has_key(views, key)
-                return
-            endif
-            var cur_state = views[key]
-            if res.status != 0
-                var err_lines: list<string> = empty(res.stderr) ? ['Failed to run git log.'] : res.stderr
-                buffer.SetLines(cur_state.log_bufnr, err_lines)
-                buffer.SetLines(cur_state.commit_bufnr, [])
-                buffer.SetLines(cur_state.diff_bufnr, [])
-                return
-            endif
-
-            if empty(res.stdout)
-                buffer.SetLines(cur_state.log_bufnr, ['(No commits found)'])
-                buffer.SetLines(cur_state.commit_bufnr, [])
-                buffer.SetLines(cur_state.diff_bufnr, [])
-                return
-            endif
-
-            var log_lines: list<string> = parser.StripTrailingWhitespace(res.stdout)
-            buffer.SetLines(cur_state.log_bufnr, log_lines)
-
-            var first_commit_lnum: number = 1
-            for idx in range(len(log_lines))
-                if parser.ExtractCommitHash(log_lines[idx]) != ''
-                    first_commit_lnum = idx + 1
-                    break
-                endif
-            endfor
-
-            if cur_state.log_winid > 0 && win_id2win(cur_state.log_winid) > 0
-                win_execute(cur_state.log_winid, 'normal! ' .. string(first_commit_lnum) .. 'G0')
-            endif
-
-            var first_hash: string = parser.ExtractCommitHash(log_lines[first_commit_lnum - 1])
-            if first_hash != ''
-                cur_state.current_hash = first_hash
-                cur_state.current_file = ''
-                LoadCommitDetail(view_id, first_hash)
-                LoadCommitDiff(view_id, first_hash, '')
-            endif
-        },
+        on_stdout: (msgs: list<string>) => OnLogStdout(view_id, msgs),
+        on_exit: (res: dict<any>) => OnLogExit(view_id, res),
     })
 enddef
 
@@ -192,6 +255,9 @@ export def Open(...extra_args: list<string>)
         diff_winid: diff_winid,
         current_hash: '',
         current_file: '',
+        stream_started: false,
+        stream_pending: [],
+        line_count: 0,
     }
 
     buffer.SetLines(log_bufnr, ['Loading git log...'])
@@ -394,6 +460,11 @@ enddef
 
 export def ActionComplete(arg_lead: string, cmd_line: string, cursor_pos: number): list<string>
     return action.Complete(arg_lead, cmd_line, cursor_pos)
+enddef
+
+export def GetState(view_id: number = -1): dict<any>
+    var id = view_id > 0 ? view_id : view.GetCurrentId()
+    return get(views, view.GetKey(id), {})
 enddef
 
 export def OnBufWipeout()

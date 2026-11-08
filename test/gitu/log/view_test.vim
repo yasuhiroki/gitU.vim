@@ -63,9 +63,60 @@ def TestYankCommitHash()
     bwipeout!
 enddef
 
+def WaitFor(Condition: func(): bool, timeout: number = 3000): bool
+    var start = reltime()
+    while !Condition()
+        if reltimefloat(reltime(start)) * 1000.0 > timeout
+            return false
+        endif
+        sleep 20m
+    endwhile
+    return true
+enddef
+
+def TestLogStreamingLoad()
+    var temp_dir = fnamemodify('./tmp/test_log_stream_' .. localtime(), ':p')
+    mkdir(temp_dir, 'p')
+
+    system('git -C ' .. fnameescape(temp_dir) .. ' init -b main')
+    system('git -C ' .. fnameescape(temp_dir) .. ' config user.name "Test"')
+    system('git -C ' .. fnameescape(temp_dir) .. ' config user.email "test@example.com"')
+
+    writefile(['first'], temp_dir .. '/file.txt')
+    system('git -C ' .. fnameescape(temp_dir) .. ' add file.txt')
+    system('git -C ' .. fnameescape(temp_dir) .. ' commit -m "commit 1"')
+
+    writefile(['first', 'second'], temp_dir .. '/file.txt')
+    system('git -C ' .. fnameescape(temp_dir) .. ' add file.txt')
+    system('git -C ' .. fnameescape(temp_dir) .. ' commit -m "commit 2"')
+
+    try
+        execute 'edit ' .. fnameescape(temp_dir .. '/file.txt')
+        log.Open()
+
+        var state = log.GetState()
+        assert_false(empty(state))
+
+        var ok = WaitFor((): bool => len(filter(getbufline(state.log_bufnr, 1, '$'), (_, l: string): bool => stridx(l, 'commit 2') >= 0)) > 0, 3000)
+        assert_true(ok, 'Timed out waiting for streaming log load of commit 2')
+
+        ok = WaitFor((): bool => len(filter(getbufline(state.commit_bufnr, 1, '$'), (_, l: string): bool => stridx(l, 'commit 2') >= 0)) > 0, 3000)
+        assert_true(ok, 'Timed out waiting for commit 2 detail')
+
+        ok = WaitFor((): bool => len(filter(getbufline(state.diff_bufnr, 1, '$'), (_, l: string): bool => stridx(l, '+second') >= 0)) > 0, 3000)
+        assert_true(ok, 'Timed out waiting for diff of commit 2')
+
+        log.Close()
+    finally
+        silent! bdelete!
+        delete(temp_dir, 'rf')
+    endtry
+enddef
+
 def RunAll()
     TestCommitPanelHeight()
     TestYankCommitHash()
+    TestLogStreamingLoad()
 
     var errors = v:errors
     if len(errors) > 0
