@@ -4,7 +4,7 @@ if exists('b:current_syntax')
     finish
 endif
 
-syntax match GitUCommitHeader /^\(Commit\|Author\|Date\|Parent\):/
+syntax match GitUCommitHeader /^\(Commit\|Author\|Date\|Parent\|Stash\):/
 syntax match GitUCommitHash /\<\x\{7,40\}\>/
 syntax match GitUCommitRefs / ([^)]*)$/
 syntax match GitUCommitDivider /^--- Files ---$/

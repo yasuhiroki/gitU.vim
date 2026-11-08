@@ -150,6 +150,14 @@ The :GitULog view consists of three synchronized panes:
     |                   | selected changed file             |
     +-------------------+-----------------------------------+
 
+When unstaged changes, staged changes, or stashes exist in the repository,
+they are listed at the top of the [GitU:Log] pane:
+    - `* [Unstaged changes]`  (working tree changes vs index)
+    - `* [Staged changes]`    (staged index changes vs HEAD)
+    - `* [stash@{N}] ...`     (stash entries)
+Selecting any of these entries displays the changed file list in [GitU:Commit]
+and the corresponding unified diff in [GitU:Diff].
+
 Key Mappings in :GitULog:
     q                   Close the GitU view and cancel background jobs.
     u                   Update / refresh the current view.

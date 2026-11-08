@@ -5,12 +5,16 @@ if exists('b:current_syntax')
 endif
 
 syntax match GitULogGraph /^[*|/\\_. -]\+/
+syntax match GitULogSpecial /^[*|/\\_. -]*\*\s*\[\%(Unstaged changes\|Staged changes\|stash@{\d\+}\)\]/
+syntax match GitULogStash /\<stash@{\d\+}\>/
 syntax match GitULogHash /\<\x\{7,40\}\>/
 syntax match GitULogRefs /([^)]*)/
 syntax match GitULogAuthor /<[^>]\+>/
 syntax match GitULogDate /(\d\{4\}-\d\{2\}-\d\{2\} \d\{2\}:\d\{2\})$/
 
 highlight default link GitULogGraph Delimiter
+highlight default link GitULogSpecial Special
+highlight default link GitULogStash Identifier
 highlight default link GitULogHash Identifier
 highlight default link GitULogRefs Statement
 highlight default link GitULogAuthor Type

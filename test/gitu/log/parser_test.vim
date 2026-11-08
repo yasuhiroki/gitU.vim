@@ -103,8 +103,55 @@ def TestStripTrailingWhitespace()
     assert_equal(expected, parser.StripTrailingWhitespace(input))
 enddef
 
+def TestExtractSpecialRef()
+    assert_equal({ type: 'unstaged' }, parser.ExtractSpecialRef('* [Unstaged changes]'))
+    assert_equal({ type: 'staged' }, parser.ExtractSpecialRef('* [Staged changes]'))
+    assert_equal({ type: 'stash', ref: 'stash@{0}', hash: '9c69077' }, parser.ExtractSpecialRef('* [stash@{0}] 9c69077 On main: my stash (2026-11-08 17:42)'))
+    assert_equal({}, parser.ExtractSpecialRef('* 7a846e3 feat: init'))
+enddef
+
+def TestParseStatusPrelude()
+    var input1 = [' M modified.txt', '?? untracked.txt']
+    assert_equal(['* [Unstaged changes]'], parser.ParseStatusPrelude(input1))
+
+    var input2 = ['M  staged.txt']
+    assert_equal(['* [Staged changes]'], parser.ParseStatusPrelude(input2))
+
+    var input3 = ['MM both.txt']
+    assert_equal(['* [Unstaged changes]', '* [Staged changes]'], parser.ParseStatusPrelude(input3))
+
+    var input4 = []
+    assert_equal([], parser.ParseStatusPrelude(input4))
+
+    var input5 = ['?? untracked.txt']
+    assert_equal([], parser.ParseStatusPrelude(input5))
+enddef
+
+def TestParseStashPrelude()
+    var input = [
+        'stash@{0} 9c69077 On main: my stash (2026-11-08 17:42)',
+        'stash@{1} 1a2b3c4 WIP on main: prev (2026-11-07 10:00)',
+    ]
+    var expected = [
+        '* [stash@{0}] 9c69077 On main: my stash (2026-11-08 17:42)',
+        '* [stash@{1}] 1a2b3c4 WIP on main: prev (2026-11-07 10:00)',
+    ]
+    assert_equal(expected, parser.ParseStashPrelude(input))
+
+    var input2 = [
+        '9c69077 On main: my stash (2026-11-08 17:42)',
+        '1a2b3c4 WIP on main: prev (2026-11-07 10:00)',
+    ]
+    assert_equal(expected, parser.ParseStashPrelude(input2))
+
+    assert_equal([], parser.ParseStashPrelude([]))
+enddef
+
 def RunAll()
     TestExtractCommitHash()
+    TestExtractSpecialRef()
+    TestParseStatusPrelude()
+    TestParseStashPrelude()
     TestExtractFilePath()
     TestComplete()
     TestFormatCommitDetail()

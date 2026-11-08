@@ -113,10 +113,98 @@ def TestLogStreamingLoad()
     endtry
 enddef
 
+def TestLogUnstagedStagedStash()
+    var temp_dir = fnamemodify('./tmp/test_log_special_' .. localtime(), ':p')
+    mkdir(temp_dir, 'p')
+
+    system('git -C ' .. fnameescape(temp_dir) .. ' init -b main')
+    system('git -C ' .. fnameescape(temp_dir) .. ' config user.name "Test"')
+    system('git -C ' .. fnameescape(temp_dir) .. ' config user.email "test@example.com"')
+
+    writefile(['base content'], temp_dir .. '/file1.txt')
+    system('git -C ' .. fnameescape(temp_dir) .. ' add file1.txt')
+    system('git -C ' .. fnameescape(temp_dir) .. ' commit -m "commit 1"')
+
+    # Stash
+    writefile(['stash content'], temp_dir .. '/stash.txt')
+    system('git -C ' .. fnameescape(temp_dir) .. ' add stash.txt')
+    system('git -C ' .. fnameescape(temp_dir) .. ' stash push -m "my test stash"')
+
+    # Staged change
+    writefile(['staged content'], temp_dir .. '/staged.txt')
+    system('git -C ' .. fnameescape(temp_dir) .. ' add staged.txt')
+
+    # Unstaged change
+    writefile(['base content', 'unstaged edit'], temp_dir .. '/file1.txt')
+
+    try
+        execute 'edit ' .. fnameescape(temp_dir .. '/file1.txt')
+        log.Open()
+
+        var state = log.GetState()
+        assert_false(empty(state))
+
+        var ok = WaitFor((): bool => len(filter(getbufline(state.log_bufnr, 1, '$'), (_, l: string): bool => stridx(l, '[Unstaged changes]') >= 0)) > 0, 3000)
+        assert_true(ok, 'Timed out waiting for [Unstaged changes]')
+
+        ok = WaitFor((): bool => len(filter(getbufline(state.log_bufnr, 1, '$'), (_, l: string): bool => stridx(l, '[Staged changes]') >= 0)) > 0, 3000)
+        assert_true(ok, 'Timed out waiting for [Staged changes]')
+
+        ok = WaitFor((): bool => len(filter(getbufline(state.log_bufnr, 1, '$'), (_, l: string): bool => stridx(l, '[stash@{0}]') >= 0)) > 0, 3000)
+        assert_true(ok, 'Timed out waiting for [stash@{0}]')
+
+        ok = WaitFor((): bool => len(filter(getbufline(state.log_bufnr, 1, '$'), (_, l: string): bool => stridx(l, 'commit 1') >= 0)) > 0, 3000)
+        assert_true(ok, 'Timed out waiting for commit 1')
+
+        ok = WaitFor((): bool => len(filter(getbufline(state.commit_bufnr, 1, '$'), (_, l: string): bool => stridx(l, 'Unstaged changes') >= 0)) > 0, 3000)
+        assert_true(ok, 'Timed out waiting for unstaged detail')
+
+        ok = WaitFor((): bool => len(filter(getbufline(state.diff_bufnr, 1, '$'), (_, l: string): bool => stridx(l, '+unstaged edit') >= 0)) > 0, 3000)
+        assert_true(ok, 'Timed out waiting for unstaged diff')
+
+        win_execute(state.log_winid, 'normal! 2G0')
+        win_execute(state.log_winid, 'call gitu#log#view#OnLogCursorMoved(v:true)')
+
+        ok = WaitFor((): bool => len(filter(getbufline(state.commit_bufnr, 1, '$'), (_, l: string): bool => stridx(l, 'Staged changes') >= 0)) > 0, 3000)
+        assert_true(ok, 'Timed out waiting for staged detail')
+
+        ok = WaitFor((): bool => len(filter(getbufline(state.diff_bufnr, 1, '$'), (_, l: string): bool => stridx(l, '+staged content') >= 0)) > 0, 3000)
+        assert_true(ok, 'Timed out waiting for staged diff')
+
+        win_execute(state.log_winid, 'normal! 3G0')
+        win_execute(state.log_winid, 'call gitu#log#view#OnLogCursorMoved(v:true)')
+
+        ok = WaitFor((): bool => len(filter(getbufline(state.commit_bufnr, 1, '$'), (_, l: string): bool => stridx(l, 'Stash: stash@{0}') >= 0)) > 0, 3000)
+        assert_true(ok, 'Timed out waiting for stash detail')
+
+        ok = WaitFor((): bool => len(filter(getbufline(state.diff_bufnr, 1, '$'), (_, l: string): bool => stridx(l, '+stash content') >= 0)) > 0, 3000)
+        assert_true(ok, 'Timed out waiting for stash diff')
+
+        var stash_line = getbufline(state.log_bufnr, 3)[0]
+        var yanked = log.YankCommitHash(stash_line)
+        assert_true(len(yanked) >= 7, 'Expected stash hash to be yanked, got: ' .. yanked)
+
+        win_execute(state.log_winid, 'normal! 4G0')
+        win_execute(state.log_winid, 'call gitu#log#view#OnLogCursorMoved(v:true)')
+
+        ok = WaitFor((): bool => len(filter(getbufline(state.commit_bufnr, 1, '$'), (_, l: string): bool => stridx(l, 'commit 1') >= 0)) > 0, 3000)
+        assert_true(ok, 'Timed out waiting for commit 1 detail')
+
+        ok = WaitFor((): bool => len(filter(getbufline(state.diff_bufnr, 1, '$'), (_, l: string): bool => stridx(l, '+base content') >= 0)) > 0, 3000)
+        assert_true(ok, 'Timed out waiting for commit 1 diff')
+
+        log.Close()
+    finally
+        silent! bdelete!
+        delete(temp_dir, 'rf')
+    endtry
+enddef
+
 def RunAll()
     TestCommitPanelHeight()
     TestYankCommitHash()
     TestLogStreamingLoad()
+    TestLogUnstagedStagedStash()
 
     var errors = v:errors
     if len(errors) > 0

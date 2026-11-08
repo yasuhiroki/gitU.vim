@@ -25,6 +25,15 @@ export def SetLines(bufnr: number, lines: list<string>)
     setbufvar(bufnr, '&modifiable', 0)
 enddef
 
+export def AppendLines(bufnr: number, lnum: number, lines: list<string>)
+    if bufnr <= 0 || !bufexists(bufnr) || empty(lines)
+        return
+    endif
+    setbufvar(bufnr, '&modifiable', 1)
+    appendbufline(bufnr, lnum, lines)
+    setbufvar(bufnr, '&modifiable', 0)
+enddef
+
 export def ResetWindowTop(winid: number)
     if winid > 0 && win_id2win(winid) > 0
         win_execute(winid, 'normal! gg0')

@@ -49,6 +49,133 @@ def LoadCommitDiff(view_id: number, hash: string, file_path: string)
     })
 enddef
 
+def LoadSpecialDiff(view_id: number, special: dict<any>, file_path: string)
+    var key: string = view.GetKey(view_id)
+    if !has_key(views, key)
+        return
+    endif
+    var state = views[key]
+
+    var args: list<string> = []
+    if special.type == 'unstaged'
+        args = ['diff']
+        if file_path != ''
+            extend(args, ['--', file_path])
+        endif
+    elseif special.type == 'staged'
+        args = ['diff', '--cached']
+        if file_path != ''
+            extend(args, ['--', file_path])
+        endif
+    elseif special.type == 'stash'
+        var stash_ref = get(special, 'ref', '')
+        args = ['diff', stash_ref .. '^1', stash_ref]
+        if file_path != ''
+            extend(args, ['--', file_path])
+        endif
+    else
+        return
+    endif
+
+    git.Run(args, {
+        cwd: state.cwd,
+        task_key: 'gitu_diff_' .. key,
+        on_exit: (res: dict<any>) => {
+            if !has_key(views, key)
+                return
+            endif
+            var cur_state = views[key]
+            if res.status != 0 && res.status != 1
+                buffer.SetLines(cur_state.diff_bufnr, empty(res.stderr) ? ['Failed to load diff.'] : res.stderr)
+                return
+            endif
+            var lines: list<string> = empty(res.stdout) ? ['(No diff change)'] : res.stdout
+            buffer.SetLines(cur_state.diff_bufnr, lines)
+            buffer.ResetWindowTop(cur_state.diff_winid)
+        },
+    })
+enddef
+
+def LoadSpecialDetail(view_id: number, special: dict<any>)
+    var key: string = view.GetKey(view_id)
+    if !has_key(views, key)
+        return
+    endif
+    var state = views[key]
+
+    if special.type == 'unstaged'
+        git.Run(['diff', '--name-status'], {
+            cwd: state.cwd,
+            task_key: 'gitu_commit_' .. key,
+            on_exit: (res: dict<any>) => {
+                if !has_key(views, key)
+                    return
+                endif
+                var cur_state = views[key]
+                var header = [
+                    'Unstaged changes',
+                    'Changes in working tree not yet staged for commit.',
+                    '',
+                    '--- Files ---',
+                ]
+                var files = res.status == 0 ? res.stdout : []
+                var lines = header + files
+                buffer.SetLines(cur_state.commit_bufnr, lines)
+                buffer.ResetWindowTop(cur_state.commit_winid)
+            },
+        })
+    elseif special.type == 'staged'
+        git.Run(['diff', '--cached', '--name-status'], {
+            cwd: state.cwd,
+            task_key: 'gitu_commit_' .. key,
+            on_exit: (res: dict<any>) => {
+                if !has_key(views, key)
+                    return
+                endif
+                var cur_state = views[key]
+                var header = [
+                    'Staged changes',
+                    'Changes to be committed (git index).',
+                    '',
+                    '--- Files ---',
+                ]
+                var files = res.status == 0 ? res.stdout : []
+                var lines = header + files
+                buffer.SetLines(cur_state.commit_bufnr, lines)
+                buffer.ResetWindowTop(cur_state.commit_winid)
+            },
+        })
+    elseif special.type == 'stash'
+        var stash_ref = get(special, 'ref', '')
+        var format_str: string = 'Stash: ' .. stash_ref .. '%nCommit: %H%d%nAuthor: %an <%ae>%nDate:   %ad%n%n%B%n--- Files ---'
+        var args: list<string> = [
+            'show',
+            '--first-parent',
+            '--name-status',
+            '--date=iso',
+            '--format=' .. format_str,
+            stash_ref,
+        ]
+        git.Run(args, {
+            cwd: state.cwd,
+            task_key: 'gitu_commit_' .. key,
+            on_exit: (res: dict<any>) => {
+                if !has_key(views, key)
+                    return
+                endif
+                var cur_state = views[key]
+                if res.status != 0
+                    buffer.SetLines(cur_state.commit_bufnr, empty(res.stderr) ? ['Failed to load stash details.'] : res.stderr)
+                    return
+                endif
+                var formatted: list<string> = parser.FormatCommitDetail(res.stdout)
+                buffer.SetLines(cur_state.commit_bufnr, formatted)
+                buffer.ResetWindowTop(cur_state.commit_winid)
+            },
+        })
+    endif
+enddef
+
 def LoadCommitDetail(view_id: number, hash: string)
     var key: string = view.GetKey(view_id)
     if !has_key(views, key) || hash == ''
@@ -85,13 +212,53 @@ def LoadCommitDetail(view_id: number, hash: string)
     })
 enddef
 
+def SelectFirstItem(view_id: number)
+    var key = view.GetKey(view_id)
+    if !has_key(views, key)
+        return
+    endif
+    var state = views[key]
+    var total_lines = getbufline(state.log_bufnr, 1, '$')
+    for idx in range(len(total_lines))
+        var cur_line = total_lines[idx]
+        var special = parser.ExtractSpecialRef(cur_line)
+        if !empty(special)
+            var item_id = special.type == 'stash' ? special.ref : special.type
+            state.current_item = item_id
+            state.current_special = special
+            state.current_hash = get(special, 'hash', '')
+            state.current_file = ''
+            LoadSpecialDetail(view_id, special)
+            LoadSpecialDiff(view_id, special, '')
+            if state.log_winid > 0 && win_id2win(state.log_winid) > 0
+                win_execute(state.log_winid, 'normal! ' .. string(idx + 1) .. 'G0')
+            endif
+            return
+        endif
+
+        var hash = parser.ExtractCommitHash(cur_line)
+        if hash != ''
+            state.current_item = hash
+            state.current_special = {}
+            state.current_hash = hash
+            state.current_file = ''
+            LoadCommitDetail(view_id, hash)
+            LoadCommitDiff(view_id, hash, '')
+            if state.log_winid > 0 && win_id2win(state.log_winid) > 0
+                win_execute(state.log_winid, 'normal! ' .. string(idx + 1) .. 'G0')
+            endif
+            return
+        endif
+    endfor
+enddef
+
 def FlushStreamLines(view_id: number)
     var key = view.GetKey(view_id)
     if !has_key(views, key)
         return
     endif
     var state = views[key]
-    if empty(state.stream_pending)
+    if empty(state.stream_pending) && state.stream_started
         return
     endif
 
@@ -100,44 +267,22 @@ def FlushStreamLines(view_id: number)
 
     if !state.stream_started
         state.stream_started = true
-        buffer.SetLines(state.log_bufnr, lines)
-        state.line_count = len(lines)
-
-        var first_commit_lnum = 1
-        for idx in range(len(lines))
-            var h = parser.ExtractCommitHash(lines[idx])
-            if h != ''
-                first_commit_lnum = idx + 1
-                state.current_hash = h
-                state.current_file = ''
-                LoadCommitDetail(view_id, h)
-                LoadCommitDiff(view_id, h, '')
-                break
-            endif
-        endfor
-
-        if state.log_winid > 0 && win_id2win(state.log_winid) > 0
-            win_execute(state.log_winid, 'normal! ' .. string(first_commit_lnum) .. 'G0')
+        var initial_lines = copy(state.prelude_lines)
+        extend(initial_lines, lines)
+        if empty(initial_lines)
+            return
         endif
+        buffer.SetLines(state.log_bufnr, initial_lines)
+        state.line_count = len(initial_lines)
+        SelectFirstItem(view_id)
     else
-        appendbufline(state.log_bufnr, state.line_count, lines)
-        state.line_count += len(lines)
+        if !empty(lines)
+            buffer.AppendLines(state.log_bufnr, state.line_count, lines)
+            state.line_count += len(lines)
+        endif
 
-        if state.current_hash == ''
-            var all_lines = getbufline(state.log_bufnr, 1, state.line_count)
-            for idx in range(len(all_lines))
-                var h = parser.ExtractCommitHash(all_lines[idx])
-                if h != ''
-                    state.current_hash = h
-                    state.current_file = ''
-                    LoadCommitDetail(view_id, h)
-                    LoadCommitDiff(view_id, h, '')
-                    if state.log_winid > 0 && win_id2win(state.log_winid) > 0
-                        win_execute(state.log_winid, 'normal! ' .. string(idx + 1) .. 'G0')
-                    endif
-                    break
-                endif
-            endfor
+        if state.current_item == ''
+            SelectFirstItem(view_id)
         endif
     endif
 enddef
@@ -185,16 +330,16 @@ def OnLogExit(view_id: number, res: dict<any>)
     endif
 enddef
 
-def LoadLog(view_id: number)
-    var key: string = view.GetKey(view_id)
+def StartLogStream(view_id: number)
+    var key = view.GetKey(view_id)
     if !has_key(views, key)
         return
     endif
     var state = views[key]
 
-    state.stream_started = false
-    state.stream_pending = []
-    state.line_count = 0
+    if !empty(state.prelude_lines)
+        FlushStreamLines(view_id)
+    endif
 
     var args: list<string> = [
         'log',
@@ -208,6 +353,67 @@ def LoadLog(view_id: number)
         task_key: 'gitu_log_' .. key,
         on_stdout: (msgs: list<string>) => OnLogStdout(view_id, msgs),
         on_exit: (res: dict<any>) => OnLogExit(view_id, res),
+    })
+enddef
+
+def CheckPreludeReady(view_id: number)
+    var key = view.GetKey(view_id)
+    if !has_key(views, key)
+        return
+    endif
+    var state = views[key]
+    if state.status_done && state.stash_done
+        var preludes = parser.ParseStatusPrelude(state.status_lines)
+        extend(preludes, parser.ParseStashPrelude(state.stash_lines))
+        state.prelude_lines = preludes
+        StartLogStream(view_id)
+    endif
+enddef
+
+def LoadLog(view_id: number)
+    var key: string = view.GetKey(view_id)
+    if !has_key(views, key)
+        return
+    endif
+    var state = views[key]
+
+    state.stream_started = false
+    state.stream_pending = []
+    state.line_count = 0
+    state.prelude_lines = []
+    state.current_item = ''
+    state.current_special = {}
+    state.current_hash = ''
+    state.current_file = ''
+    state.status_done = false
+    state.stash_done = false
+    state.status_lines = []
+    state.stash_lines = []
+
+    git.Run(['status', '--porcelain=v1'], {
+        cwd: state.cwd,
+        task_key: 'gitu_log_status_' .. key,
+        on_exit: (res: dict<any>) => {
+            if !has_key(views, key)
+                return
+            endif
+            views[key].status_done = true
+            views[key].status_lines = (res.status == 0) ? res.stdout : []
+            CheckPreludeReady(view_id)
+        },
+    })
+
+    git.Run(['stash', 'list', '--pretty=format:%h %s (%cd)', '--date=format:%Y-%m-%d %H:%M'], {
+        cwd: state.cwd,
+        task_key: 'gitu_log_stash_' .. key,
+        on_exit: (res: dict<any>) => {
+            if !has_key(views, key)
+                return
+            endif
+            views[key].stash_done = true
+            views[key].stash_lines = (res.status == 0) ? res.stdout : []
+            CheckPreludeReady(view_id)
+        },
     })
 enddef
 
@@ -253,11 +459,18 @@ export def Open(...extra_args: list<string>)
         log_winid: log_winid,
         commit_winid: commit_winid,
         diff_winid: diff_winid,
+        current_item: '',
+        current_special: {},
         current_hash: '',
         current_file: '',
         stream_started: false,
         stream_pending: [],
         line_count: 0,
+        prelude_lines: [],
+        status_done: false,
+        stash_done: false,
+        status_lines: [],
+        stash_lines: [],
     }
 
     buffer.SetLines(log_bufnr, ['Loading git log...'])
@@ -287,14 +500,33 @@ export def OnLogCursorMoved(force: bool = false)
         return
     endif
     var state = views[key]
-    var hash: string = parser.ExtractCommitHash(getline('.'))
-    if hash == ''
-        return
-    endif
-    if !force && hash == state.current_hash
+    var cur_line = getline('.')
+
+    var special = parser.ExtractSpecialRef(cur_line)
+    if !empty(special)
+        var item_id = special.type == 'stash' ? special.ref : special.type
+        if !force && item_id == state.current_item
+            return
+        endif
+        state.current_item = item_id
+        state.current_special = special
+        state.current_hash = get(special, 'hash', '')
+        state.current_file = ''
+        LoadSpecialDetail(view_id, special)
+        LoadSpecialDiff(view_id, special, '')
         return
     endif
 
+    var hash: string = parser.ExtractCommitHash(cur_line)
+    if hash == ''
+        return
+    endif
+    if !force && hash == state.current_item
+        return
+    endif
+
+    state.current_item = hash
+    state.current_special = {}
     state.current_hash = hash
     state.current_file = ''
     LoadCommitDetail(view_id, hash)
@@ -308,7 +540,7 @@ export def OnCommitCursorMoved(force: bool = false)
         return
     endif
     var state = views[key]
-    if state.current_hash == ''
+    if state.current_hash == '' && empty(state.current_special)
         return
     endif
 
@@ -324,7 +556,11 @@ export def OnCommitCursorMoved(force: bool = false)
     endif
 
     state.current_file = file_path
-    LoadCommitDiff(view_id, state.current_hash, file_path)
+    if !empty(state.current_special)
+        LoadSpecialDiff(view_id, state.current_special, file_path)
+    else
+        LoadCommitDiff(view_id, state.current_hash, file_path)
+    endif
 enddef
 
 export def Refresh()
@@ -385,6 +621,13 @@ enddef
 export def YankCommitHash(line_str: string = ''): string
     var target_line: string = (line_str != '') ? line_str : getline('.')
     var hash: string = parser.ExtractCommitHash(target_line)
+    if hash == ''
+        var special = parser.ExtractSpecialRef(target_line)
+        if !empty(special) && special.type == 'stash' && get(special, 'hash', '') != ''
+            hash = special.hash
+        endif
+    endif
+
     if hash == ''
         notify.Warn('No commit hash on current line')
         return ''
@@ -472,6 +715,8 @@ export def OnBufWipeout()
     var key: string = view.GetKey(view_id)
     if has_key(views, key)
         git.StopByKey('gitu_log_' .. key)
+        git.StopByKey('gitu_log_status_' .. key)
+        git.StopByKey('gitu_log_stash_' .. key)
         git.StopByKey('gitu_commit_' .. key)
         git.StopByKey('gitu_diff_' .. key)
         remove(views, key)

@@ -4,6 +4,71 @@ export def ExtractCommitHash(line: string): string
     return matchstr(line, '^[*|/\\_. -]*\*[ |/\\_. -]*\zs\x\{7,40\}\ze\>')
 enddef
 
+export def ExtractSpecialRef(line: string): dict<any>
+    if line =~# '\[Unstaged changes\]'
+        return { type: 'unstaged' }
+    endif
+    if line =~# '\[Staged changes\]'
+        return { type: 'staged' }
+    endif
+    var m = matchlist(line, '\[\(stash@{\d\+}\)\]\%(\s\+\(\x\+\)\)\?')
+    if len(m) >= 2 && m[1] != ''
+        return { type: 'stash', ref: m[1], hash: get(m, 2, '') }
+    endif
+    return {}
+enddef
+
+export def ParseStatusPrelude(status_lines: list<string>): list<string>
+    var has_staged = false
+    var has_unstaged = false
+
+    for line in status_lines
+        if len(line) < 2
+            continue
+        endif
+        var x = line[0]
+        var y = line[1]
+        if x =~# '[MADRC]'
+            has_staged = true
+        endif
+        if y =~# '[MD]' || x == 'U' || y == 'U'
+            has_unstaged = true
+        endif
+    endfor
+
+    var res: list<string> = []
+    if has_unstaged
+        add(res, '* [Unstaged changes]')
+    endif
+    if has_staged
+        add(res, '* [Staged changes]')
+    endif
+    return res
+enddef
+
+export def ParseStashPrelude(stash_lines: list<string>): list<string>
+    var res: list<string> = []
+    for idx in range(len(stash_lines))
+        var line = trim(stash_lines[idx])
+        if line == ''
+            continue
+        endif
+        var m = matchlist(line, '^\(stash@{\d\+}\)\s\+\(\x\+\)\s\+\(.\+\)$')
+        if len(m) >= 4
+            add(res, printf('* [%s] %s %s', m[1], m[2], m[3]))
+            continue
+        endif
+        var m2 = matchlist(line, '^\(\x\+\)\s\+\(.\+\)$')
+        if len(m2) >= 3
+            var stash_ref = printf('stash@{%d}', idx)
+            add(res, printf('* [%s] %s %s', stash_ref, m2[1], m2[2]))
+            continue
+        endif
+        add(res, '* [' .. line .. ']')
+    endfor
+    return res
+enddef
+
 export def ExtractFilePath(line: string): string
     var renamed: string = matchstr(line, '^[RC]\d*\t[^\t]\+\t\zs.\+$')
     if renamed != ''
