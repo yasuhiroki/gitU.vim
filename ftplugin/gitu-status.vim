@@ -6,7 +6,7 @@ endif
 b:did_ftplugin = 1
 
 import autoload 'gitu/status.vim'
-import autoload 'gitu/commit.vim'
+import autoload 'gitu/commit/view.vim' as commit
 
 setlocal nowrap
 setlocal cursorline

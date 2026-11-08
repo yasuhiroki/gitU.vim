@@ -1,6 +1,6 @@
 vim9script
 
-import autoload 'gitu/commit.vim'
+import autoload 'gitu/commit/parser.vim'
 
 def TestFilterCommitMessage()
     var input = [
@@ -25,9 +25,8 @@ def TestFilterCommitMessage()
         'detailed description line 2',
     ]
 
-    assert_equal(expected, commit.FilterCommitMessage(input))
+    assert_equal(expected, parser.FilterCommitMessage(input))
 
-    # Empty commit message with comments only
     var comments_only = [
         '',
         '# Comment line 1',
@@ -35,19 +34,26 @@ def TestFilterCommitMessage()
         '   ',
         '',
     ]
-    assert_equal([], commit.FilterCommitMessage(comments_only))
+    assert_equal([], parser.FilterCommitMessage(comments_only))
 
-    # Custom comment character
     var custom_char_input = [
         'title here',
         '; comment with semicolon',
         '; another comment',
     ]
-    assert_equal(['title here'], commit.FilterCommitMessage(custom_char_input, ';'))
+    assert_equal(['title here'], parser.FilterCommitMessage(custom_char_input, ';'))
+enddef
+
+def TestRequiresStagedChanges()
+    assert_true(parser.RequiresStagedChanges([]))
+    assert_false(parser.RequiresStagedChanges(['--amend']))
+    assert_false(parser.RequiresStagedChanges(['-a']))
+    assert_false(parser.RequiresStagedChanges(['--all']))
+    assert_false(parser.RequiresStagedChanges(['--allow-empty']))
 enddef
 
 def TestBuildCommitTemplate()
-    var temp_dir = tempname() .. '_gitu_test_commit'
+    var temp_dir = fnamemodify('./tmp/test_commit_template', ':p')
     mkdir(temp_dir, 'p')
 
     system('git -C ' .. fnameescape(temp_dir) .. ' init -b main')
@@ -58,49 +64,48 @@ def TestBuildCommitTemplate()
     writefile(['hello'], file_path)
     system('git -C ' .. fnameescape(temp_dir) .. ' add sample.txt')
 
-    var template = commit.BuildCommitTemplate(temp_dir)
-    assert_equal('', template[0])
-    assert_equal('', template[1])
-    assert_match('^# Please enter the commit message', template[2])
+    try
+        var template = parser.BuildCommitTemplate(temp_dir)
+        assert_equal('', template[0])
+        assert_equal('', template[1])
+        assert_match('^# Please enter the commit message', template[2])
 
-    # Check status comment is present
-    var has_changes_line = false
-    for line in template
-        if line =~ '^# Changes to be committed:'
-            has_changes_line = true
-            break
-        endif
-    endfor
-    assert_true(has_changes_line)
-
-    delete(temp_dir, 'rf')
+        var has_changes_line = false
+        for line in template
+            if line =~ '^# Changes to be committed:'
+                has_changes_line = true
+                break
+            endif
+        endfor
+        assert_true(has_changes_line)
+    finally
+        delete(temp_dir, 'rf')
+    endtry
 enddef
 
 def TestComplete()
-    var all = commit.Complete('', 'GitUCommit ', 11)
+    var all = parser.Complete('', 'GitUCommit ', 11)
     assert_true(index(all, '--amend') >= 0)
     assert_true(index(all, '-a') >= 0)
     assert_true(index(all, '--all') >= 0)
 
-    var filtered = commit.Complete('--am', 'GitUCommit --am', 15)
+    var filtered = parser.Complete('--am', 'GitUCommit --am', 15)
     assert_equal(['--amend'], filtered)
 enddef
 
 def RunAll()
     TestFilterCommitMessage()
+    TestRequiresStagedChanges()
     TestBuildCommitTemplate()
     TestComplete()
 
-    var errors = v:errors
-    if len(errors) > 0
-        for err in errors
+    if len(v:errors) > 0
+        for err in v:errors
             echomsg err
         endfor
         cquit!
-    else
-        echomsg 'All commit tests passed!'
-        qall!
     endif
+    qall!
 enddef
 
 RunAll()
