@@ -86,7 +86,13 @@ Vim 8/9 packages: >
     Opens a commit editor in a new tab page. Write the commit message, then
     save and close (`:wq` or `:x`) to commit. Closing without saving or
     leaving an empty commit message aborts the commit.
-    Accepts Git commit flags such as `--amend` or `-a`.
+    Respects Git configurations and conventions matching native `git commit`:
+    - `commit.template` (global or local) and `-t` / `--template <file>`
+    - `core.commentChar`
+    - `commit.verbose` and `-v` / `--verbose` (appends diff below scissors line)
+    - `prepare-commit-msg` git hook execution
+    - Merging/squashing messages (`MERGE_MSG`, `SQUASH_MSG`)
+    Accepts Git commit flags such as `--amend`, `-a`, `-v`, or `-s`.
 
 :GitUBlame [rev]                                                   *:GitUBlame*
     Opens the 3-pane interactive Git blame viewer for the current file in a

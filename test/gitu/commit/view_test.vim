@@ -80,9 +80,51 @@ def TestGitUCommitProxy()
     endtry
 enddef
 
+def TestCommitWithTemplateConfig()
+    var temp_dir = fnamemodify('./tmp/test_commit_tmpl_view_' .. localtime(), ':p')
+    mkdir(temp_dir, 'p')
+
+    system('git -C ' .. fnameescape(temp_dir) .. ' init -b main')
+    system('git -C ' .. fnameescape(temp_dir) .. ' config user.name "Test"')
+    system('git -C ' .. fnameescape(temp_dir) .. ' config user.email "test@example.com"')
+
+    var tmpl_file = temp_dir .. '/template.md'
+    writefile(['', '# feat: new feature', '# fix: bug fix'], tmpl_file)
+    system('git -C ' .. fnameescape(temp_dir) .. ' config commit.template ' .. fnameescape(tmpl_file))
+
+    writefile(['sample code'], temp_dir .. '/code.txt')
+    system('git -C ' .. fnameescape(temp_dir) .. ' add code.txt')
+
+    try
+        execute 'edit ' .. fnameescape(temp_dir .. '/code.txt')
+        commit.Open()
+
+        var ok = WaitFor((): bool => &filetype == 'gitcommit', 3000)
+        assert_true(ok, 'Expected commit editor tab to open')
+
+        assert_equal('', getline(1))
+        assert_equal('# feat: new feature', getline(2))
+        assert_equal(1, line('.'))
+
+        setline(1, 'feat: implemented template feature')
+        wq
+
+        ok = WaitFor((): bool => {
+            var log_out = system('git -C ' .. fnameescape(temp_dir) .. ' log --oneline')
+            return stridx(log_out, 'feat: implemented template feature') >= 0
+        }, 3000)
+        assert_true(ok, 'Expected commit with template to be created after :wq')
+        sleep 100m
+    finally
+        silent! bdelete!
+        delete(temp_dir, 'rf')
+    endtry
+enddef
+
 def RunAll()
     TestCommitWriteAndQuit()
     TestGitUCommitProxy()
+    TestCommitWithTemplateConfig()
 
     var errors = v:errors
     if len(errors) > 0

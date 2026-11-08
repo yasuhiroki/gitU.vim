@@ -66,7 +66,7 @@ export def OnBufWipeout()
         return
     endif
 
-    var cleaned: list<string> = parser.FilterCommitMessage(session.saved_lines)
+    var cleaned: list<string> = parser.FilterCommitMessage(session.saved_lines, get(session, 'comment_char', '#'))
     if empty(cleaned)
         notify.Warn('Aborting commit due to empty commit message.')
         return
@@ -91,6 +91,7 @@ def OpenCommitTab(repo_root: string, extra_args: list<string>)
     setlocal filetype=gitcommit
 
     var template: list<string> = parser.BuildCommitTemplate(repo_root, extra_args)
+    var comment_char: string = parser.ResolveCommentChar(repo_root)
     setline(1, template)
     setlocal nomodified
     cursor(1, 1)
@@ -99,6 +100,7 @@ def OpenCommitTab(repo_root: string, extra_args: list<string>)
         id: session_id,
         repo_root: repo_root,
         extra_args: extra_args,
+        comment_char: comment_char,
         bufnr: bufnr,
         winid: winid,
         saved: false,
