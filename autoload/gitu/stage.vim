@@ -1,6 +1,6 @@
 vim9script
 
-import autoload 'gitu/buffer.vim'
+import autoload 'gitu/core/buffer.vim'
 
 var current_session: dict<any> = {}
 

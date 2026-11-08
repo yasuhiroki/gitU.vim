@@ -1,6 +1,6 @@
 vim9script
 
-import autoload 'gitu/git.vim'
+import autoload 'gitu/core/git.vim'
 import autoload 'gitu/log.vim'
 import autoload 'gitu/status.vim'
 

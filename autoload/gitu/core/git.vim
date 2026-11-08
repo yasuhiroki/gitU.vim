@@ -1,6 +1,17 @@
 vim9script
 
-import autoload 'gitu/job.vim'
+import autoload 'gitu/core/job.vim'
+
+# Constraint: expand('%:p:h') on an unnamed or non-file buffer returns the
+# startup directory rather than empty string, so check &buftype and expand('%').
+export def ResolveInitialCwd(): string
+    var buf_name: string = (&buftype == '') ? expand('%') : ''
+    var buf_dir: string = (buf_name != '') ? expand('%:p:h') : ''
+    if buf_dir != '' && isdirectory(buf_dir)
+        return buf_dir
+    endif
+    return getcwd()
+enddef
 
 export def Run(args: list<string>, opts: dict<any> = {}): number
     var cmd: list<string> = ['git', '--no-pager', '-c', 'color.ui=false'] + args

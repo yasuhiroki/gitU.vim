@@ -1,7 +1,7 @@
 vim9script
 
-import autoload 'gitu/buffer.vim'
-import autoload 'gitu/git.vim'
+import autoload 'gitu/core/buffer.vim'
+import autoload 'gitu/core/git.vim'
 import autoload 'gitu/github.vim'
 import autoload 'gitu/action.vim'
 

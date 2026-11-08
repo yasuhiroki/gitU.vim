@@ -11,6 +11,7 @@ def FinishIfReady(id: number)
     if !has_key(active_jobs, id_key)
         return
     endif
+
     var state = active_jobs[id_key]
     if !state.closed || !state.exited
         return
@@ -114,10 +115,10 @@ export def Start(cmd: list<string>, opts: dict<any> = {}): number
         job_opts.env = opts.env
     endif
 
-    var j: job = job_start(cmd, job_opts)
-    state.job = j
+    var spawned_job: job = job_start(cmd, job_opts)
+    state.job = spawned_job
 
-    if job_status(j) == 'fail'
+    if job_status(spawned_job) == 'fail'
         remove(active_jobs, id_key)
         if task_key != '' && get(key_to_job, task_key, -1) == id
             remove(key_to_job, task_key)
@@ -143,6 +144,7 @@ export def Stop(id: number)
     if !has_key(active_jobs, id_key)
         return
     endif
+
     var state = active_jobs[id_key]
     state.cancelled = true
     if state.task_key != '' && get(key_to_job, state.task_key, -1) == id
@@ -158,8 +160,7 @@ export def StopByKey(task_key: string)
     if task_key == '' || !has_key(key_to_job, task_key)
         return
     endif
-    var id: number = key_to_job[task_key]
-    Stop(id)
+    Stop(key_to_job[task_key])
 enddef
 
 export def StopAll()

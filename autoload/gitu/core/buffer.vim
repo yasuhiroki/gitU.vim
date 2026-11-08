@@ -24,3 +24,18 @@ export def SetLines(bufnr: number, lines: list<string>)
     setbufline(bufnr, 1, empty(lines) ? [''] : lines)
     setbufvar(bufnr, '&modifiable', 0)
 enddef
+
+export def ResetWindowTop(winid: number)
+    if winid > 0 && win_id2win(winid) > 0
+        win_execute(winid, 'normal! gg0')
+    endif
+enddef
+
+export def CloseTabOrReset()
+    if tabpagenr('$') > 1
+        tabclose
+    else
+        silent! only
+        enew
+    endif
+enddef
