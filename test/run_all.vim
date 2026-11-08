@@ -1,11 +1,12 @@
 vim9script
 
+var repo_root = fnameescape(getcwd())
 var test_files = glob('test/**/*_test.vim', 1, 1)
 var total = len(test_files)
 var failed = 0
 
 for file in test_files
-    var out = system('vim -u NONE -es -N --cmd "set rtp+=." -S ' .. file)
+    var out = system('vim -u NONE -es -N --cmd "set rtp^=' .. repo_root .. '" -S ' .. file)
     if v:shell_error != 0
         failed += 1
         echomsg 'FAILED: ' .. file

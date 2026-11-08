@@ -4,7 +4,7 @@ import autoload 'gitu/core/buffer.vim'
 
 def TestLogKeymaps()
     enew
-    var nr = buffer.InitCurrentScratch('gitu-log', 'GitUTestKeymapLog')
+    buffer.InitCurrentScratch('gitu-log', 'GitUTestKeymapLog')
     runtime ftplugin/gitu-log.vim
     var map_u = maparg('u', 'n', false, true)
     assert_false(empty(map_u))
@@ -37,7 +37,7 @@ enddef
 
 def TestCommitKeymaps()
     enew
-    var nr = buffer.InitCurrentScratch('gitu-commit', 'GitUTestKeymapCommit')
+    buffer.InitCurrentScratch('gitu-commit', 'GitUTestKeymapCommit')
     runtime ftplugin/gitu-commit.vim
     var map_u = maparg('u', 'n', false, true)
     assert_false(empty(map_u))
@@ -63,7 +63,7 @@ enddef
 
 def TestDiffKeymaps()
     enew
-    var nr = buffer.InitCurrentScratch('gitu-diff', 'GitUTestKeymapDiff')
+    buffer.InitCurrentScratch('gitu-diff', 'GitUTestKeymapDiff')
     runtime ftplugin/gitu-diff.vim
     var map_u = maparg('u', 'n', false, true)
     assert_false(empty(map_u))
@@ -79,7 +79,7 @@ enddef
 
 def TestStatusKeymaps()
     enew
-    var nr = buffer.InitCurrentScratch('gitu-status', 'GitUTestKeymapStatus')
+    buffer.InitCurrentScratch('gitu-status', 'GitUTestKeymapStatus')
     runtime ftplugin/gitu-status.vim
 
     var map_u = maparg('u', 'n', false, true)

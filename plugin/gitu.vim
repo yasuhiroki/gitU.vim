@@ -8,7 +8,7 @@ g:loaded_gitu = true
 import autoload 'gitu/log/view.vim' as log
 import autoload 'gitu/status/view.vim' as status
 import autoload 'gitu/commit/view.vim' as commit
-import autoload 'gitu/cmd.vim'
+import autoload 'gitu/cmd/proxy.vim' as cmd
 
 command! -nargs=* -complete=customlist,cmd.Complete GitU cmd.Execute(<f-args>)
 command! GitUStatus status.Open()
