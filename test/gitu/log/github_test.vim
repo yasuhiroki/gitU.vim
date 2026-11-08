@@ -1,6 +1,6 @@
 vim9script
 
-import autoload 'gitu/github.vim'
+import autoload 'gitu/log/github.vim'
 
 def TestParseGitHubRepoUrl()
     assert_equal('https://github.com/yasuhiroki/gitU.vim', github.ParseGitHubRepoUrl('git@github.com:yasuhiroki/gitU.vim.git'))
@@ -10,7 +10,6 @@ def TestParseGitHubRepoUrl()
     assert_equal('https://github.com/yasuhiroki/gitU.vim', github.ParseGitHubRepoUrl('ssh://git@github.com/yasuhiroki/gitU.vim.git'))
     assert_equal('https://github.com/yasuhiroki/gitU.vim', github.ParseGitHubRepoUrl('git://github.com/yasuhiroki/gitU.vim.git'))
 
-    # Non-GitHub URLs
     assert_equal('', github.ParseGitHubRepoUrl('git@gitlab.com:user/repo.git'))
     assert_equal('', github.ParseGitHubRepoUrl('https://example.com/repo.git'))
     assert_equal('', github.ParseGitHubRepoUrl(''))
@@ -25,7 +24,7 @@ def TestExtractPrNumber()
 enddef
 
 def TestResolvePrUrl()
-    var temp_dir = tempname() .. '_gitu_test_github'
+    var temp_dir = fnamemodify('./tmp/test_github_' .. localtime(), ':p')
     mkdir(temp_dir, 'p')
 
     system('git -C ' .. fnameescape(temp_dir) .. ' init -b main')
@@ -41,13 +40,11 @@ def TestResolvePrUrl()
     var url = github.ResolvePrUrl(temp_dir, 'https://github.com/owner/repo', hash)
     assert_equal('https://github.com/owner/repo/pull/42', url)
 
-    # Test fallback
     writefile(['world'], file_path)
     system('git -C ' .. fnameescape(temp_dir) .. ' add test.txt')
     system('git -C ' .. fnameescape(temp_dir) .. ' commit -m "chore: no pr"')
     var hash2 = trim(system('git -C ' .. fnameescape(temp_dir) .. ' rev-parse HEAD'))
     var fallback_url = github.ResolvePrUrl(temp_dir, 'https://github.com/owner/repo', hash2)
-    # If gh finds nothing or in non-gh repo, fallback to search URL
     assert_true(stridx(fallback_url, 'https://github.com/owner/repo/pulls?q=is%3Apr+') == 0)
 
     delete(temp_dir, 'rf')

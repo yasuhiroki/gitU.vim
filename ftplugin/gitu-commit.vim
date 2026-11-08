@@ -5,7 +5,7 @@ if exists('b:did_ftplugin')
 endif
 b:did_ftplugin = 1
 
-import autoload 'gitu/log.vim'
+import autoload 'gitu/log/view.vim' as log
 
 setlocal nowrap
 setlocal cursorline

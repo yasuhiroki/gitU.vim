@@ -1,11 +1,12 @@
 vim9script
 
+import autoload 'gitu/core/notify.vim'
+
 export def ParseGitHubRepoUrl(raw: string): string
-    var clean = trim(raw)
-    var u = substitute(clean, '\.git$', '', '')
-    var m = matchlist(u, '\vgithub\.com[:/]([^/]+)/([^/]+)$')
-    if len(m) >= 3 && m[1] != '' && m[2] != ''
-        return printf('https://github.com/%s/%s', m[1], m[2])
+    var clean_url = substitute(trim(raw), '\.git$', '', '')
+    var matches = matchlist(clean_url, '\vgithub\.com[:/]([^/]+)/([^/]+)$')
+    if len(matches) >= 3 && matches[1] != '' && matches[2] != ''
+        return printf('https://github.com/%s/%s', matches[1], matches[2])
     endif
     return ''
 enddef
@@ -18,14 +19,14 @@ export def GetGitHubRepoUrl(cwd: string): string
     endif
 
     var target_remotes = ['upstream', 'origin']
-    for r in remotes
-        if index(target_remotes, r) < 0
-            add(target_remotes, r)
+    for remote_name in remotes
+        if index(target_remotes, remote_name) < 0
+            add(target_remotes, remote_name)
         endif
     endfor
 
-    for r in target_remotes
-        var url_out = trim(system('git -C ' .. fnameescape(cwd) .. ' remote get-url ' .. fnameescape(r)))
+    for remote_name in target_remotes
+        var url_out = trim(system('git -C ' .. fnameescape(cwd) .. ' remote get-url ' .. fnameescape(remote_name)))
         if v:shell_error == 0 && url_out != ''
             var parsed = ParseGitHubRepoUrl(url_out)
             if parsed != ''
@@ -38,15 +39,14 @@ export def GetGitHubRepoUrl(cwd: string): string
 enddef
 
 export def ExtractPrNumber(text: string): string
-    var m = matchlist(text, '\v%(Merge pull request #|\(#)(\d+)')
-    if len(m) >= 2 && m[1] != ''
-        return m[1]
+    var matches = matchlist(text, '\v%(Merge pull request #|\(#)(\d+)')
+    if len(matches) >= 2 && matches[1] != ''
+        return matches[1]
     endif
     return ''
 enddef
 
 export def ResolvePrUrl(cwd: string, repo_url: string, hash: string): string
-    # 1. Check commit message directly
     var msg = system('git -C ' .. fnameescape(cwd) .. ' show -s --format=%B ' .. fnameescape(hash))
     if v:shell_error == 0 && msg != ''
         var pr_num = ExtractPrNumber(msg)
@@ -55,7 +55,6 @@ export def ResolvePrUrl(cwd: string, repo_url: string, hash: string): string
         endif
     endif
 
-    # 2. Check merge commits in ancestry path
     var merge_log = system('git -C ' .. fnameescape(cwd) .. ' log --merges --ancestry-path --reverse --format=%s ' .. fnameescape(hash) .. '..HEAD')
     if v:shell_error == 0 && merge_log != ''
         for line in split(merge_log, "\n")
@@ -66,7 +65,6 @@ export def ResolvePrUrl(cwd: string, repo_url: string, hash: string): string
         endfor
     endif
 
-    # 3. Direct to GitHub Pull Request search by commit hash
     return printf('%s/pulls?q=is%%3Apr+%s', repo_url, hash)
 enddef
 
@@ -91,36 +89,30 @@ export def OpenBrowser(url: string)
     if !empty(cmd)
         job_start(cmd)
     else
-        echohl ErrorMsg
-        echomsg 'No browser launcher found (open, xdg-open, etc.)'
-        echohl None
+        notify.Error('No browser launcher found (open, xdg-open, etc.)')
     endif
 enddef
 
 export def OpenCommit(cwd: string, hash: string)
     var repo_url = GetGitHubRepoUrl(cwd)
     if repo_url == ''
-        echohl WarningMsg
-        echomsg 'Could not detect GitHub repository from git remotes'
-        echohl None
+        notify.Warn('Could not detect GitHub repository from git remotes')
         return
     endif
 
     var url = printf('%s/commit/%s', repo_url, hash)
     OpenBrowser(url)
-    echomsg 'Opening ' .. url
+    notify.Info('Opening ' .. url)
 enddef
 
 export def OpenPullRequest(cwd: string, hash: string)
     var repo_url = GetGitHubRepoUrl(cwd)
     if repo_url == ''
-        echohl WarningMsg
-        echomsg 'Could not detect GitHub repository from git remotes'
-        echohl None
+        notify.Warn('Could not detect GitHub repository from git remotes')
         return
     endif
 
     var url = ResolvePrUrl(cwd, repo_url, hash)
     OpenBrowser(url)
-    echomsg 'Opening ' .. url
+    notify.Info('Opening ' .. url)
 enddef

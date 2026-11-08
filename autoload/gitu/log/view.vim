@@ -2,50 +2,17 @@ vim9script
 
 import autoload 'gitu/core/buffer.vim'
 import autoload 'gitu/core/git.vim'
-import autoload 'gitu/github.vim'
-import autoload 'gitu/action.vim'
+import autoload 'gitu/core/notify.vim'
+import autoload 'gitu/core/view.vim'
+import autoload 'gitu/log/parser.vim'
+import autoload 'gitu/log/github.vim'
+import autoload 'gitu/log/action.vim'
 
 var next_view_id: number = 0
 var views: dict<dict<any>> = {}
 
-def GetViewKey(view_id: number): string
-    return string(view_id)
-enddef
-
-def GetCurrentViewId(): number
-    if exists('b:gitu_view_id')
-        return b:gitu_view_id
-    endif
-    if exists('t:gitu_view_id')
-        return t:gitu_view_id
-    endif
-    return -1
-enddef
-
-export def ExtractCommitHash(line: string): string
-    return matchstr(line, '^[*|/\\_. -]*\*[ |/\\_. -]*\zs\x\{7,40\}\ze\>')
-enddef
-
-export def ExtractFilePath(line: string): string
-    var renamed: string = matchstr(line, '^[RC]\d*\t[^\t]\+\t\zs.\+$')
-    if renamed != ''
-        return renamed
-    endif
-    return matchstr(line, '^[MADTU]\t\zs.\+$')
-enddef
-
-export def StripTrailingWhitespace(lines: list<string>): list<string>
-    return mapnew(lines, (_, line: string): string => substitute(line, '\s\+$', '', ''))
-enddef
-
-def ResetWindowTop(winid: number)
-    if winid > 0 && win_id2win(winid) > 0
-        win_execute(winid, 'normal! gg0')
-    endif
-enddef
-
 def LoadCommitDiff(view_id: number, hash: string, file_path: string)
-    var key: string = GetViewKey(view_id)
+    var key: string = view.GetKey(view_id)
     if !has_key(views, key) || hash == ''
         return
     endif
@@ -77,29 +44,13 @@ def LoadCommitDiff(view_id: number, hash: string, file_path: string)
             endif
             var lines: list<string> = empty(res.stdout) ? ['(No diff change)'] : res.stdout
             buffer.SetLines(cur_state.diff_bufnr, lines)
-            ResetWindowTop(cur_state.diff_winid)
+            buffer.ResetWindowTop(cur_state.diff_winid)
         },
     })
 enddef
 
-export def FormatCommitDetail(lines: list<string>): list<string>
-    var out_lines = copy(lines)
-    var files_idx: number = index(out_lines, '--- Files ---')
-    if files_idx < 0
-        return out_lines
-    endif
-
-    while files_idx > 0 && out_lines[files_idx - 1] =~ '^\s*$'
-        remove(out_lines, files_idx - 1)
-        files_idx -= 1
-    endwhile
-
-    insert(out_lines, '', files_idx)
-    return out_lines
-enddef
-
 def LoadCommitDetail(view_id: number, hash: string)
-    var key: string = GetViewKey(view_id)
+    var key: string = view.GetKey(view_id)
     if !has_key(views, key) || hash == ''
         return
     endif
@@ -127,15 +78,15 @@ def LoadCommitDetail(view_id: number, hash: string)
                 buffer.SetLines(cur_state.commit_bufnr, empty(res.stderr) ? ['Failed to load commit details.'] : res.stderr)
                 return
             endif
-            var formatted: list<string> = FormatCommitDetail(res.stdout)
+            var formatted: list<string> = parser.FormatCommitDetail(res.stdout)
             buffer.SetLines(cur_state.commit_bufnr, formatted)
-            ResetWindowTop(cur_state.commit_winid)
+            buffer.ResetWindowTop(cur_state.commit_winid)
         },
     })
 enddef
 
 def LoadLog(view_id: number)
-    var key: string = GetViewKey(view_id)
+    var key: string = view.GetKey(view_id)
     if !has_key(views, key)
         return
     endif
@@ -171,12 +122,12 @@ def LoadLog(view_id: number)
                 return
             endif
 
-            var log_lines: list<string> = StripTrailingWhitespace(res.stdout)
+            var log_lines: list<string> = parser.StripTrailingWhitespace(res.stdout)
             buffer.SetLines(cur_state.log_bufnr, log_lines)
 
             var first_commit_lnum: number = 1
             for idx in range(len(log_lines))
-                if ExtractCommitHash(log_lines[idx]) != ''
+                if parser.ExtractCommitHash(log_lines[idx]) != ''
                     first_commit_lnum = idx + 1
                     break
                 endif
@@ -186,7 +137,7 @@ def LoadLog(view_id: number)
                 win_execute(cur_state.log_winid, 'normal! ' .. string(first_commit_lnum) .. 'G0')
             endif
 
-            var first_hash: string = ExtractCommitHash(log_lines[first_commit_lnum - 1])
+            var first_hash: string = parser.ExtractCommitHash(log_lines[first_commit_lnum - 1])
             if first_hash != ''
                 cur_state.current_hash = first_hash
                 cur_state.current_file = ''
@@ -197,63 +148,13 @@ def LoadLog(view_id: number)
     })
 enddef
 
-export def NormalizeArgs(raw_args: list<string>): list<string>
-    var result: list<string> = []
-    var patterns: list<string> = []
-    var skip_next = false
-
-    for i in range(len(raw_args))
-        if skip_next
-            skip_next = false
-            continue
-        endif
-
-        var arg = raw_args[i]
-        if arg == '-n' || arg == '-L' || arg == '-S' || arg == '-G'
-            add(result, arg)
-            if i + 1 < len(raw_args)
-                add(result, raw_args[i + 1])
-                skip_next = true
-            endif
-        elseif arg =~ '^--%(since|after|until|before|max-count|skip|grep|author|committer)='
-            add(result, arg)
-        elseif arg == '--since' || arg == '--after' || arg == '--until' || arg == '--before' || arg == '--max-count' || arg == '--skip' || arg == '--grep' || arg == '--author' || arg == '--committer'
-            add(result, arg)
-            if i + 1 < len(raw_args)
-                add(result, raw_args[i + 1])
-                skip_next = true
-            endif
-        elseif arg =~ '^-'
-            add(result, arg)
-        else
-            add(patterns, arg)
-        endif
-    endfor
-
-    var has_diff_filter = false
-    for item in result
-        if item == '-G' || item =~ '^-G' || item == '-S' || item =~ '^-S'
-            has_diff_filter = true
-            break
-        endif
-    endfor
-
-    if !has_diff_filter && !empty(patterns)
-        var combined_pattern = join(patterns, ' ')
-        add(result, '-G' .. combined_pattern)
-    endif
-
-    return result
-enddef
-
 export def Open(...extra_args: list<string>)
-    var normalized_args = NormalizeArgs(extra_args)
-    var buf_dir: string = expand('%:p:h')
-    var initial_cwd: string = (buf_dir != '' && isdirectory(buf_dir)) ? buf_dir : getcwd()
+    var normalized_args = parser.NormalizeArgs(extra_args)
+    var initial_cwd: string = git.ResolveInitialCwd()
 
     next_view_id += 1
     var view_id: number = next_view_id
-    var key: string = GetViewKey(view_id)
+    var key: string = view.GetKey(view_id)
 
     tabnew
     t:gitu_view_id = view_id
@@ -314,13 +215,13 @@ export def Open(...extra_args: list<string>)
 enddef
 
 export def OnLogCursorMoved(force: bool = false)
-    var view_id: number = GetCurrentViewId()
-    var key: string = GetViewKey(view_id)
+    var view_id: number = view.GetCurrentId()
+    var key: string = view.GetKey(view_id)
     if !has_key(views, key)
         return
     endif
     var state = views[key]
-    var hash: string = ExtractCommitHash(getline('.'))
+    var hash: string = parser.ExtractCommitHash(getline('.'))
     if hash == ''
         return
     endif
@@ -335,8 +236,8 @@ export def OnLogCursorMoved(force: bool = false)
 enddef
 
 export def OnCommitCursorMoved(force: bool = false)
-    var view_id: number = GetCurrentViewId()
-    var key: string = GetViewKey(view_id)
+    var view_id: number = view.GetCurrentId()
+    var key: string = view.GetKey(view_id)
     if !has_key(views, key)
         return
     endif
@@ -349,7 +250,7 @@ export def OnCommitCursorMoved(force: bool = false)
     var files_header_lnum: number = search('^--- Files ---$', 'bnW')
     var file_path: string = ''
     if files_header_lnum > 0 && cur_lnum > files_header_lnum
-        file_path = ExtractFilePath(getline(cur_lnum))
+        file_path = parser.ExtractFilePath(getline(cur_lnum))
     endif
 
     if !force && file_path == state.current_file
@@ -361,8 +262,8 @@ export def OnCommitCursorMoved(force: bool = false)
 enddef
 
 export def Refresh()
-    var view_id: number = GetCurrentViewId()
-    var key: string = GetViewKey(view_id)
+    var view_id: number = view.GetCurrentId()
+    var key: string = view.GetKey(view_id)
     if !has_key(views, key)
         return
     endif
@@ -379,9 +280,11 @@ export def RefreshAll()
     endfor
 enddef
 
+view.RegisterRefresher('log', RefreshAll)
+
 export def CycleFocus(direction: number = 1)
-    var view_id: number = GetCurrentViewId()
-    var key: string = GetViewKey(view_id)
+    var view_id: number = view.GetCurrentId()
+    var key: string = view.GetKey(view_id)
     if !has_key(views, key)
         return
     endif
@@ -402,8 +305,8 @@ enddef
 
 export def SelectCommitItem()
     OnCommitCursorMoved(true)
-    var view_id: number = GetCurrentViewId()
-    var key: string = GetViewKey(view_id)
+    var view_id: number = view.GetCurrentId()
+    var key: string = view.GetKey(view_id)
     if !has_key(views, key)
         return
     endif
@@ -415,11 +318,9 @@ enddef
 
 export def YankCommitHash(line_str: string = ''): string
     var target_line: string = (line_str != '') ? line_str : getline('.')
-    var hash: string = ExtractCommitHash(target_line)
+    var hash: string = parser.ExtractCommitHash(target_line)
     if hash == ''
-        echohl WarningMsg
-        echomsg 'No commit hash on current line'
-        echohl None
+        notify.Warn('No commit hash on current line')
         return ''
     endif
 
@@ -434,94 +335,61 @@ export def YankCommitHash(line_str: string = ''): string
         endif
     endif
 
-    echomsg 'Copied ' .. hash
+    notify.Info('Copied ' .. hash)
     return hash
 enddef
 
-export def OpenCommitWeb()
-    var view_id: number = GetCurrentViewId()
-    var key: string = GetViewKey(view_id)
-    var hash: string = ExtractCommitHash(getline('.'))
+def ResolveSelectedCommit(): dict<any>
+    var view_id: number = view.GetCurrentId()
+    var key: string = view.GetKey(view_id)
+    var hash: string = parser.ExtractCommitHash(getline('.'))
     if hash == '' && has_key(views, key)
         hash = views[key].current_hash
     endif
-    if hash == ''
-        echohl WarningMsg
-        echomsg 'No commit found for current line'
-        echohl None
+    var cwd: string = has_key(views, key) ? views[key].cwd : getcwd()
+    return { hash: hash, cwd: cwd, view_id: view_id }
+enddef
+
+export def OpenCommitWeb()
+    var sel = ResolveSelectedCommit()
+    if sel.hash == ''
+        notify.Warn('No commit found for current line')
         return
     endif
-    var cwd: string = has_key(views, key) ? views[key].cwd : getcwd()
-    github.OpenCommit(cwd, hash)
+    github.OpenCommit(sel.cwd, sel.hash)
 enddef
 
 export def OpenPullRequestWeb()
-    var view_id: number = GetCurrentViewId()
-    var key: string = GetViewKey(view_id)
-    var hash: string = ExtractCommitHash(getline('.'))
-    if hash == '' && has_key(views, key)
-        hash = views[key].current_hash
-    endif
-    if hash == ''
-        echohl WarningMsg
-        echomsg 'No commit found for current line'
-        echohl None
+    var sel = ResolveSelectedCommit()
+    if sel.hash == ''
+        notify.Warn('No commit found for current line')
         return
     endif
-    var cwd: string = has_key(views, key) ? views[key].cwd : getcwd()
-    github.OpenPullRequest(cwd, hash)
+    github.OpenPullRequest(sel.cwd, sel.hash)
 enddef
 
 export def PromptAction()
-    var view_id: number = GetCurrentViewId()
-    var key: string = GetViewKey(view_id)
-    if !has_key(views, key)
+    var sel = ResolveSelectedCommit()
+    if !has_key(views, view.GetKey(sel.view_id))
         return
     endif
-
-    var hash: string = ExtractCommitHash(getline('.'))
-    if hash == ''
-        hash = views[key].current_hash
-    endif
-    if hash == ''
-        echohl WarningMsg
-        echomsg 'No commit selected for action'
-        echohl None
+    if sel.hash == ''
+        notify.Warn('No commit selected for action')
         return
     endif
-
-    var cwd: string = views[key].cwd
-    action.Prompt({
-        view_id: view_id,
-        hash: hash,
-        cwd: cwd,
-    })
+    action.Prompt(sel)
 enddef
 
 export def ExecuteAction(action_name: string)
-    var view_id: number = GetCurrentViewId()
-    var key: string = GetViewKey(view_id)
-    if !has_key(views, key)
+    var sel = ResolveSelectedCommit()
+    if !has_key(views, view.GetKey(sel.view_id))
         return
     endif
-
-    var hash: string = ExtractCommitHash(getline('.'))
-    if hash == ''
-        hash = views[key].current_hash
-    endif
-    if hash == ''
-        echohl WarningMsg
-        echomsg 'No commit selected for action'
-        echohl None
+    if sel.hash == ''
+        notify.Warn('No commit selected for action')
         return
     endif
-
-    var cwd: string = views[key].cwd
-    action.Execute(action_name, {
-        view_id: view_id,
-        hash: hash,
-        cwd: cwd,
-    })
+    action.Execute(action_name, sel)
 enddef
 
 export def ActionComplete(arg_lead: string, cmd_line: string, cursor_pos: number): list<string>
@@ -529,8 +397,8 @@ export def ActionComplete(arg_lead: string, cmd_line: string, cursor_pos: number
 enddef
 
 export def OnBufWipeout()
-    var view_id: number = GetCurrentViewId()
-    var key: string = GetViewKey(view_id)
+    var view_id: number = view.GetCurrentId()
+    var key: string = view.GetKey(view_id)
     if has_key(views, key)
         git.StopByKey('gitu_log_' .. key)
         git.StopByKey('gitu_commit_' .. key)
@@ -541,30 +409,9 @@ enddef
 
 export def Close()
     OnBufWipeout()
-
-    if tabpagenr('$') > 1
-        tabclose
-    else
-        silent! only
-        enew
-    endif
+    buffer.CloseTabOrReset()
 enddef
 
 export def Complete(arg_lead: string, cmd_line: string, cursor_pos: number): list<string>
-    var candidates: list<string> = [
-        '--all',
-        '--branches',
-        '--tags',
-        '--remotes',
-        '--first-parent',
-        '--merges',
-        '--no-merges',
-        '-n',
-        '-G',
-        '-S',
-    ]
-    if arg_lead == ''
-        return candidates
-    endif
-    return filter(candidates, (_, val: string): bool => stridx(val, arg_lead) == 0)
+    return parser.Complete(arg_lead, cmd_line, cursor_pos)
 enddef

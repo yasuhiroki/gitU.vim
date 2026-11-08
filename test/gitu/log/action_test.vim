@@ -1,9 +1,6 @@
 vim9script
 
-var plugin_root = fnamemodify(expand('<sfile>:p'), ':h:h:h')
-execute 'set rtp^=' .. fnameescape(plugin_root)
-
-import autoload 'gitu/action.vim'
+import autoload 'gitu/log/action.vim'
 
 def WaitFor(Condition: func(): bool, timeout: number = 3000): bool
     var start = reltime()
@@ -17,16 +14,13 @@ def WaitFor(Condition: func(): bool, timeout: number = 3000): bool
 enddef
 
 def TestRegistryAndResolve()
-    # List contains fixup
     var list = action.List()
     assert_true(index(list, 'fixup') >= 0)
 
-    # Get fixup
     var fixup_def = action.Get('fixup')
     assert_equal('fixup', fixup_def.name)
     assert_equal('f', fixup_def.key)
 
-    # Resolve
     assert_equal('fixup', action.Resolve('fixup'))
     assert_equal('fixup', action.Resolve('Fixup'))
     assert_equal('fixup', action.Resolve('FIXUP'))
@@ -36,13 +30,11 @@ def TestRegistryAndResolve()
     assert_equal('', action.Resolve('unknown_action'))
     assert_equal('', action.Resolve(''))
 
-    # Complete
     var all = action.Complete('', '', 0)
     assert_true(index(all, 'fixup') >= 0)
     assert_equal(['fixup'], action.Complete('fi', '', 2))
     assert_equal([], action.Complete('xyz', '', 3))
 
-    # Register custom action
     var custom_called = false
     action.Register('test_custom', {
         name: 'test_custom',
@@ -102,7 +94,6 @@ def TestExecuteFixupWithStagedChanges()
 
     var hash = trim(system('git -C ' .. fnameescape(temp_dir) .. ' rev-parse HEAD'))
 
-    # Modify and stage changes
     writefile(['first line', 'second line fix'], temp_dir .. '/file.txt')
     system('git -C ' .. fnameescape(temp_dir) .. ' add file.txt')
 
@@ -119,7 +110,6 @@ def TestExecuteFixupWithStagedChanges()
         assert_equal(0, action.last_action_result.status)
         assert_equal('fixup', action.last_action_result.action)
 
-        # Check that the fixup commit was created in git log
         var log_out = trim(system('git -C ' .. fnameescape(temp_dir) .. ' log -n 1 --pretty=format:%s'))
         assert_equal('fixup! feat: initial commit', log_out)
     finally

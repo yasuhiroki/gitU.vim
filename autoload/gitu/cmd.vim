@@ -1,7 +1,7 @@
 vim9script
 
 import autoload 'gitu/core/git.vim'
-import autoload 'gitu/log.vim'
+import autoload 'gitu/core/view.vim'
 import autoload 'gitu/status/view.vim' as status
 
 export var last_result: dict<any> = {}
@@ -106,8 +106,7 @@ def OnCmdExit(cmd_str: string, res: dict<any>)
         endif
     endif
 
-    status.RefreshAll()
-    log.RefreshAll()
+    view.RefreshAll()
 enddef
 
 def OnRepoResolved(args: list<string>, repo_root: string, stderr: list<string>)
