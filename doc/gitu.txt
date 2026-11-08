@@ -145,6 +145,9 @@ The :GitULog view consists of three synchronized panes:
 Key Mappings in :GitULog:
     q                   Close the GitU view and cancel background jobs.
     u                   Update / refresh the current view.
+    a                   Open the action prompt for the selected commit.
+                        Enter an action name (e.g. `fixup` or `f`) to execute
+                        it on the commit.
     go                  Open the commit on GitHub in the web browser.
     gp                  Open the pull request containing the commit on GitHub.
     <Tab>               Cycle focus forward across panes.

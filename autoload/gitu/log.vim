@@ -3,6 +3,7 @@ vim9script
 import autoload 'gitu/buffer.vim'
 import autoload 'gitu/git.vim'
 import autoload 'gitu/github.vim'
+import autoload 'gitu/action.vim'
 
 var next_view_id: number = 0
 var views: dict<dict<any>> = {}
@@ -469,6 +470,62 @@ export def OpenPullRequestWeb()
     endif
     var cwd: string = has_key(views, key) ? views[key].cwd : getcwd()
     github.OpenPullRequest(cwd, hash)
+enddef
+
+export def PromptAction()
+    var view_id: number = GetCurrentViewId()
+    var key: string = GetViewKey(view_id)
+    if !has_key(views, key)
+        return
+    endif
+
+    var hash: string = ExtractCommitHash(getline('.'))
+    if hash == ''
+        hash = views[key].current_hash
+    endif
+    if hash == ''
+        echohl WarningMsg
+        echomsg 'No commit selected for action'
+        echohl None
+        return
+    endif
+
+    var cwd: string = views[key].cwd
+    action.Prompt({
+        view_id: view_id,
+        hash: hash,
+        cwd: cwd,
+    })
+enddef
+
+export def ExecuteAction(action_name: string)
+    var view_id: number = GetCurrentViewId()
+    var key: string = GetViewKey(view_id)
+    if !has_key(views, key)
+        return
+    endif
+
+    var hash: string = ExtractCommitHash(getline('.'))
+    if hash == ''
+        hash = views[key].current_hash
+    endif
+    if hash == ''
+        echohl WarningMsg
+        echomsg 'No commit selected for action'
+        echohl None
+        return
+    endif
+
+    var cwd: string = views[key].cwd
+    action.Execute(action_name, {
+        view_id: view_id,
+        hash: hash,
+        cwd: cwd,
+    })
+enddef
+
+export def ActionComplete(arg_lead: string, cmd_line: string, cursor_pos: number): list<string>
+    return action.Complete(arg_lead, cmd_line, cursor_pos)
 enddef
 
 export def OnBufWipeout()

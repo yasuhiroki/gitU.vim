@@ -25,6 +25,13 @@ def TestLogKeymaps()
     assert_false(empty(map_gp))
     assert_match('log\.OpenPullRequestWeb()', map_gp.rhs)
     assert_equal(1, map_gp.buffer)
+
+    var map_a = maparg('a', 'n', false, true)
+    assert_false(empty(map_a))
+    assert_match('log\.PromptAction()', map_a.rhs)
+    assert_equal(1, map_a.buffer)
+
+    assert_equal(2, exists(':GitULogAction'))
     bwipeout!
 enddef
 
@@ -46,6 +53,11 @@ def TestCommitKeymaps()
     assert_false(empty(map_c_gp))
     assert_match('log\.OpenPullRequestWeb()', map_c_gp.rhs)
     assert_equal(1, map_c_gp.buffer)
+
+    var map_c_a = maparg('a', 'n', false, true)
+    assert_false(empty(map_c_a))
+    assert_match('log\.PromptAction()', map_c_a.rhs)
+    assert_equal(1, map_c_a.buffer)
     bwipeout!
 enddef
 
@@ -57,6 +69,11 @@ def TestDiffKeymaps()
     assert_false(empty(map_u))
     assert_match('log\.Refresh()', map_u.rhs)
     assert_equal(1, map_u.buffer)
+
+    var map_d_a = maparg('a', 'n', false, true)
+    assert_false(empty(map_d_a))
+    assert_match('log\.PromptAction()', map_d_a.rhs)
+    assert_equal(1, map_d_a.buffer)
     bwipeout!
 enddef
 

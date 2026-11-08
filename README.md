@@ -5,6 +5,7 @@ A Vim plugin for Git operations, written in Vim9 script.
 ## Features
 
 - **3-Pane Git Log Viewer (`:GitULog`)**: Interactive commit log graph, commit details/file list, and diff preview panes in a new tab page.
+- **Commit Actions (`a`)**: Extensible action runner on the selected commit in `:GitULog`. Supports `fixup` to create a `git commit --fixup` with currently staged changes.
 - **Interactive Git Status (`:GitUStatus` / `:GitU`)**: Fast overview of staged, unstaged, and untracked files.
   - `<<`: Stage file (`git add`)
   - `>>`: Unstage file (`git restore --staged`)
@@ -48,6 +49,7 @@ A Vim plugin for Git operations, written in Vim9 script.
 #### Within `:GitULog` panes:
 - `q`: Close the GitU view and cancel background jobs
 - `u`: Update / refresh the view
+- `a`: Action menu for selected commit (type `fixup` or `f` to create a fixup commit)
 - `yy` (in log pane): Copy commit hash of the current line
 - `go`: Open the commit on GitHub in the web browser
 - `gp`: Open the pull request containing the commit on GitHub in the web browser
