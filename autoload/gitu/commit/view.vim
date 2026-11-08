@@ -49,7 +49,11 @@ export def OnBufWrite()
 enddef
 
 export def OnBufWipeout()
-    var session_key: string = get(b:, 'gitu_commit_session_key', '')
+    var bufnr: number = str2nr(expand('<abuf>'))
+    var session_key: string = bufnr > 0 ? getbufvar(bufnr, 'gitu_commit_session_key', '') : ''
+    if session_key == ''
+        session_key = get(b:, 'gitu_commit_session_key', '')
+    endif
     if session_key == '' || !has_key(sessions, session_key)
         return
     endif

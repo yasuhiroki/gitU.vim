@@ -4,6 +4,7 @@ import autoload 'gitu/core/git.vim'
 import autoload 'gitu/core/notify.vim'
 import autoload 'gitu/core/view.vim'
 import autoload 'gitu/status/view.vim' as status
+import autoload 'gitu/commit/view.vim' as commit
 import autoload 'gitu/cmd/complete.vim'
 
 export var last_result: dict<any> = {}
@@ -56,6 +57,21 @@ export def Execute(...args: list<string>)
     if empty(args)
         status.Open()
         return
+    endif
+
+    var subcmd = args[0]
+    if subcmd == 'commit'
+        var has_msg = false
+        for arg in args[1 :]
+            if arg =~# '^-\w*m' || arg =~# '^--message' || arg =~# '^-F' || arg =~# '^--file'
+                has_msg = true
+                break
+            endif
+        endfor
+        if !has_msg
+            call(commit.Open, args[1 :])
+            return
+        endif
     endif
 
     var initial_cwd: string = git.ResolveInitialCwd()

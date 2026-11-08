@@ -189,6 +189,11 @@ g:gitu_commit_height                                    *g:gitu_commit_height*
     Set to 0 or negative to disable resizing and preserve equal splits.
     Default: 15
 
+g:gitu_log_max_count                                    *g:gitu_log_max_count*
+    Maximum number of commit entries fetched by default in the :GitULog view.
+    Set to 0 for unlimited commits, or override with `-n` / `--max-count`.
+    Default: 1000
+
 g:gitu_status_height                                    *g:gitu_status_height*
     Height (in rows) of the status window when split with diff or 3-way
     patch panels.
