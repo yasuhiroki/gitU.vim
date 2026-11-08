@@ -2,7 +2,7 @@ vim9script
 
 import autoload 'gitu/core/git.vim'
 import autoload 'gitu/log.vim'
-import autoload 'gitu/status.vim'
+import autoload 'gitu/status/view.vim' as status
 
 export var last_action_result: dict<any> = {}
 

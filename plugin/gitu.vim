@@ -6,7 +6,7 @@ endif
 g:loaded_gitu = true
 
 import autoload 'gitu/log.vim'
-import autoload 'gitu/status.vim'
+import autoload 'gitu/status/view.vim' as status
 import autoload 'gitu/commit/view.vim' as commit
 import autoload 'gitu/cmd.vim'
 

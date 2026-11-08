@@ -4,7 +4,7 @@ var plugin_root = fnamemodify(expand('<sfile>:p'), ':h:h:h')
 execute 'set rtp^=' .. fnameescape(plugin_root)
 
 import autoload 'gitu/cmd.vim'
-import autoload 'gitu/status.vim'
+import autoload 'gitu/status/view.vim' as status
 
 def WaitFor(Condition: func(): bool, timeout: number = 2000): bool
     var start = reltime()

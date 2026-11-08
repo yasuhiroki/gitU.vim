@@ -1,6 +1,7 @@
 vim9script
 
 import autoload 'gitu/core/buffer.vim'
+import autoload 'gitu/core/notify.vim'
 
 var current_session: dict<any> = {}
 
@@ -22,9 +23,7 @@ export def SaveStageBuffer(repo_root: string, rel_file_path: string, bufnr: numb
 
     var hash: string = trim(system('git -C ' .. fnameescape(repo_root) .. ' hash-object -w --stdin', content))
     if v:shell_error != 0 || len(hash) != 40
-        echohl ErrorMsg
-        echomsg 'Failed to write git object: ' .. hash
-        echohl None
+        notify.Error('Failed to write git object: ' .. hash)
         return
     endif
 
@@ -34,16 +33,14 @@ export def SaveStageBuffer(repo_root: string, rel_file_path: string, bufnr: numb
         fnameescape(mode),
         fnameescape(hash),
         fnameescape(rel_file_path))
-    var res: string = system(update_cmd)
+    var update_out: string = system(update_cmd)
     if v:shell_error != 0
-        echohl ErrorMsg
-        echomsg 'Failed to update index: ' .. res
-        echohl None
+        notify.Error('Failed to update index: ' .. update_out)
         return
     endif
 
     setbufvar(bufnr, '&modified', 0)
-    echomsg 'Staged: ' .. rel_file_path
+    notify.Info('Staged: ' .. rel_file_path)
 
     if !empty(current_session) && type(get(current_session, 'OnSave', null)) == v:t_func
         current_session.OnSave()
@@ -67,10 +64,10 @@ export def Close3Way()
 
     diffoff!
 
-    for wid in [session.head_winid, session.stage_winid, session.current_winid]
-        if wid > 0 && win_id2win(wid) > 0
-            win_execute(wid, 'diffoff')
-            win_execute(wid, 'close!')
+    for winid in [session.head_winid, session.stage_winid, session.current_winid]
+        if winid > 0 && win_id2win(winid) > 0
+            win_execute(winid, 'diffoff')
+            win_execute(winid, 'close!')
         endif
     endfor
 
@@ -88,9 +85,7 @@ enddef
 export def Open3Way(repo_root: string, rel_file_path: string, status_winid: number = -1, OnClose: any = null, OnSave: any = null)
     var full_path: string = repo_root .. '/' .. rel_file_path
     if !filereadable(full_path)
-        echohl ErrorMsg
-        echomsg 'File not found: ' .. rel_file_path
-        echohl None
+        notify.Error('File not found: ' .. rel_file_path)
         return
     endif
 
@@ -108,7 +103,6 @@ export def Open3Way(repo_root: string, rel_file_path: string, status_winid: numb
         stage_lines = ['']
     endif
 
-    # Clean up any extraneous windows in the status tab
     if status_winid > 0 && win_id2win(status_winid) > 0
         win_gotoid(status_winid)
         silent! only
@@ -119,7 +113,6 @@ export def Open3Way(repo_root: string, rel_file_path: string, status_winid: numb
         setwinvar(status_winid, '&winfixheight', 1)
     endif
 
-    # Panel 1 (Left): HEAD
     botright new
     var head_winid: number = win_getid()
     var head_bufnr: number = buffer.InitCurrentScratch('', '[GitU:HEAD] ' .. rel_file_path)
@@ -128,7 +121,6 @@ export def Open3Way(repo_root: string, rel_file_path: string, status_winid: numb
     diffthis
     nnoremap <buffer> <silent> q <ScriptCmd>Close3Way()<CR>
 
-    # Panel 2 (Center): STAGE
     rightbelow vnew
     var stage_winid: number = win_getid()
     var stage_bufnr: number = bufnr('%')
@@ -151,7 +143,6 @@ export def Open3Way(repo_root: string, rel_file_path: string, status_winid: numb
 
     nnoremap <buffer> <silent> q <ScriptCmd>Close3Way()<CR>
 
-    # Panel 3 (Right): CURRENT (Worktree file)
     rightbelow vnew
     var current_winid: number = win_getid()
     execute 'edit ' .. fnameescape(full_path)
@@ -185,6 +176,5 @@ export def Open3Way(repo_root: string, rel_file_path: string, status_winid: numb
         OnSave: OnSave,
     }
 
-    # Focus Center (STAGE) panel
     win_gotoid(stage_winid)
 enddef

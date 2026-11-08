@@ -1,9 +1,9 @@
 vim9script
 
-import autoload 'gitu/stage.vim'
+import autoload 'gitu/status/patch.vim'
 
 def TestSaveStageBuffer()
-    var temp_dir = tempname() .. '_gitu_test_repo'
+    var temp_dir = fnamemodify('./tmp/test_patch_save_' .. localtime(), ':p')
     mkdir(temp_dir, 'p')
 
     system('git -C ' .. fnameescape(temp_dir) .. ' init -b main')
@@ -21,7 +21,7 @@ def TestSaveStageBuffer()
     var stage_bufnr = bufnr('%')
     setline(1, ['line 1 modified', 'line 2 with staged edit'])
 
-    stage.SaveStageBuffer(temp_dir, 'sample.txt', stage_bufnr)
+    patch.SaveStageBuffer(temp_dir, 'sample.txt', stage_bufnr)
 
     var stage_out = trim(system('git -C ' .. fnameescape(temp_dir) .. ' show :sample.txt'))
     var expected = "line 1 modified\nline 2 with staged edit"
@@ -36,7 +36,7 @@ def TestOpen3Way()
     &lines = 50
     unlet! g:gitu_status_height
 
-    var temp_dir = tempname() .. '_gitu_test_3way'
+    var temp_dir = fnamemodify('./tmp/test_patch_3way_' .. localtime(), ':p')
     mkdir(temp_dir, 'p')
 
     system('git -C ' .. fnameescape(temp_dir) .. ' init -b main')
@@ -55,20 +55,16 @@ def TestOpen3Way()
 
     var callback_called = false
     var save_callback_called = false
-    stage.Open3Way(temp_dir, 'test.txt', status_winid, () => {
+    patch.Open3Way(temp_dir, 'test.txt', status_winid, () => {
         callback_called = true
     }, () => {
         save_callback_called = true
     })
 
-    # Should have 4 windows in total (status on top, 3 panels on bottom)
     assert_equal(4, winnr('$'))
     assert_equal(15, winheight(status_winid))
-
-    # Active window should be the center STAGE panel
     assert_match('\[GitU:STAGE\] test\.txt$', bufname('%'))
 
-    # Edit STAGE buffer and save
     setline(1, 'staged content')
     write
 
@@ -77,17 +73,15 @@ def TestOpen3Way()
     var staged_out = trim(system('git -C ' .. fnameescape(temp_dir) .. ' show :test.txt'))
     assert_equal('staged content', staged_out)
 
-    # Close 3way
-    stage.Close3Way()
+    patch.Close3Way()
     assert_true(callback_called)
     assert_equal(1, winnr('$'))
     assert_equal(status_winid, win_getid())
 
-    # Test custom status height
     g:gitu_status_height = 20
-    stage.Open3Way(temp_dir, 'test.txt', status_winid)
+    patch.Open3Way(temp_dir, 'test.txt', status_winid)
     assert_equal(20, winheight(status_winid))
-    stage.Close3Way()
+    patch.Close3Way()
     unlet! g:gitu_status_height
 
     bwipeout!
@@ -98,7 +92,7 @@ def Test3WayFiletypeAndSyntax()
     filetype plugin on
     syntax on
 
-    var temp_dir = tempname() .. '_gitu_test_ft'
+    var temp_dir = fnamemodify('./tmp/test_patch_ft_' .. localtime(), ':p')
     mkdir(temp_dir, 'p')
 
     system('git -C ' .. fnameescape(temp_dir) .. ' init -b main')
@@ -115,7 +109,7 @@ def Test3WayFiletypeAndSyntax()
     enew
     var status_winid = win_getid()
 
-    stage.Open3Way(temp_dir, 'sample.py', status_winid)
+    patch.Open3Way(temp_dir, 'sample.py', status_winid)
 
     assert_equal('python', &filetype)
     assert_equal('[GitU:STAGE] sample.py', bufname('%'))
@@ -129,14 +123,14 @@ def Test3WayFiletypeAndSyntax()
     assert_equal('python', &filetype)
     assert_match('sample\.py$', bufname('%'))
 
-    stage.Close3Way()
+    patch.Close3Way()
 
     bwipeout!
     delete(temp_dir, 'rf')
 enddef
 
 def TestCloseStageWindow()
-    var temp_dir = tempname() .. '_gitu_test_close_stage'
+    var temp_dir = fnamemodify('./tmp/test_patch_close_' .. localtime(), ':p')
     mkdir(temp_dir, 'p')
 
     system('git -C ' .. fnameescape(temp_dir) .. ' init -b main')
@@ -148,37 +142,31 @@ def TestCloseStageWindow()
     system('git -C ' .. fnameescape(temp_dir) .. ' add test.txt')
     system('git -C ' .. fnameescape(temp_dir) .. ' commit -m "base"')
 
-    # Tab 1: open test.txt in another tab
     execute 'edit ' .. fnameescape(file_path)
     var tab1_winid = win_getid()
     var tab1_bufnr = bufnr('%')
 
-    # Tab 2: open status and 3way
     tabnew
     var status_winid = win_getid()
 
     var callback_called = false
-    stage.Open3Way(temp_dir, 'test.txt', status_winid, () => {
+    patch.Open3Way(temp_dir, 'test.txt', status_winid, () => {
         callback_called = true
     })
 
     assert_equal(4, winnr('$'))
 
-    # Close STAGE window with :close
     close!
 
-    # Status tab should now only have 1 window (status)
     assert_equal(1, winnr('$'))
     assert_equal(status_winid, win_getid())
     assert_true(callback_called)
 
-    # Switch back to Tab 1 and verify test.txt is still open and not diffed
     tabprevious
     assert_equal(tab1_winid, win_getid())
     assert_equal(tab1_bufnr, bufnr('%'))
     assert_false(&diff)
 
-    # Clean up Tab 2
     tabnext
     tabclose
 
