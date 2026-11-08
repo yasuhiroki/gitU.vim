@@ -93,6 +93,10 @@ def TestStatusKeymaps()
     assert_false(empty(map_patch))
     assert_match('status\.OpenPatchEdit()', map_patch.rhs)
 
+    var map_commit = maparg('cc', 'n', false, true)
+    assert_false(empty(map_commit))
+    assert_match('commit\.Open()', map_commit.rhs)
+
     var map_q = maparg('q', 'n', false, true)
     assert_false(empty(map_q))
     assert_match('status\.Close()', map_q.rhs)

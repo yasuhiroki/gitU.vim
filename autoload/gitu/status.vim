@@ -230,6 +230,12 @@ export def Refresh()
     LoadStatus(view_id)
 enddef
 
+export def RefreshAll()
+    for view_id in keys(views)
+        LoadStatus(str2nr(view_id))
+    endfor
+enddef
+
 export def GetSelectedFiles(state: dict<any>, start_lnum: number, end_lnum: number, action: string): list<string>
     if start_lnum <= 0 || end_lnum <= 0
         return []

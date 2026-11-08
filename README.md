@@ -30,6 +30,10 @@ A Vim plugin for Git operations, written in Vim9 script.
 " Open interactive Git status
 :GitUStatus
 :GitU
+
+" Open commit editor in a new tab (write and close :wq to commit)
+:GitUCommit
+:GitUCommit --amend
 ```
 
 ### Key Mappings
@@ -49,6 +53,7 @@ A Vim plugin for Git operations, written in Vim9 script.
 - `>>` (Normal / Visual): Unstage the file(s) under cursor or in visual selection (`git restore --staged`)
 - `dd`: View diff of the file under cursor
 - `pp`: Open 3-way vertical patch editor (`HEAD` | `STAGE` | `CURRENT`)
+- `cc`: Open commit editor tab (`:GitUCommit`)
 - `u`: Update / refresh the status view
 - `q`: Close the status view
 

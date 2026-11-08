@@ -370,6 +370,14 @@ export def Refresh()
     LoadLog(view_id)
 enddef
 
+export def RefreshAll()
+    for view_id in keys(views)
+        views[view_id].current_hash = ''
+        views[view_id].current_file = ''
+        LoadLog(str2nr(view_id))
+    endfor
+enddef
+
 export def CycleFocus(direction: number = 1)
     var view_id: number = GetCurrentViewId()
     var key: string = GetViewKey(view_id)

@@ -6,6 +6,7 @@ endif
 b:did_ftplugin = 1
 
 import autoload 'gitu/status.vim'
+import autoload 'gitu/commit.vim'
 
 setlocal nowrap
 setlocal cursorline
@@ -24,6 +25,7 @@ xnoremap <buffer> <silent> << <Esc><ScriptCmd>status.StageVisual()<CR>
 xnoremap <buffer> <silent> >> <Esc><ScriptCmd>status.UnstageVisual()<CR>
 nnoremap <buffer> <silent> dd <ScriptCmd>status.OpenDiff()<CR>
 nnoremap <buffer> <silent> pp <ScriptCmd>status.OpenPatchEdit()<CR>
+nnoremap <buffer> <silent> cc <ScriptCmd>commit.Open()<CR>
 
 augroup GitUStatusBuffer
     autocmd! * <buffer>

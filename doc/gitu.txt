@@ -69,6 +69,12 @@ Vim 8/9 packages: >
 :GitU                                                                  *:GitU*
     Opens the interactive Git status viewer in a new tab page.
 
+:GitUCommit [args]                                                *:GitUCommit*
+    Opens a commit editor in a new tab page. Write the commit message, then
+    save and close (`:wq` or `:x`) to commit. Closing without saving or
+    leaving an empty commit message aborts the commit.
+    Accepts Git commit flags such as `--amend` or `-a`.
+
 ==============================================================================
 4. STATUS AND 3-WAY STAGING                                      *gitu-status*
 
@@ -83,6 +89,7 @@ Key Mappings in status buffer:
                         (`git restore --staged`).
     dd                  Open diff preview for the file under cursor.
     pp                  Open 3-way vertical patch editor (`git add -p`).
+    cc                  Open commit editor tab (`:GitUCommit`).
     u                   Update / refresh the status view.
     q                   Close the status view.
 
