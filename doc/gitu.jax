@@ -67,8 +67,20 @@ Vim 8/9 packages: >
         :GitULog <pattern>
 <   一般的な Git オプションのコマンドライン補完が利用可能です。
 
+:GitU [args]                                                            *:GitU*
+    引数なしで実行した場合は、新しいタブページにインタラクティブな Git
+    ステータス画面を開きます (|:GitUStatus| と同等)。
+    引数を指定した場合は、Vim をブロックせずにバックグラウンドで非同期に
+    `git <args>` を実行します。コマンドの出力結果はメッセージ表示され、
+    実行完了時に表示中のステータス画面やログ画面が自動的に再読み込みされます。
+    Git サブコマンド、オプション、ブランチ名の補完に対応しています: >
+        :GitU
+        :GitU push origin main
+        :GitU fetch --prune
+        :GitU checkout feature-branch
+        :GitU stash pop
+<
 :GitUStatus                                                      *:GitUStatus*
-:GitU                                                                  *:GitU*
     新しいタブページにインタラクティブな Git ステータス画面を開きます。
 
 :GitUCommit [args]                                                *:GitUCommit*

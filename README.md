@@ -10,6 +10,7 @@ A Vim plugin for Git operations, written in Vim9 script.
   - `>>`: Unstage file (`git restore --staged`)
   - `dd`: View diff of the file under cursor
   - `pp`: 3-way vertical patch editor (`git add -p` / edit mode)
+- **Asynchronous Git Proxy (`:GitU <args...>`)**: Run any Git commands asynchronously directly from Vim with completion (e.g., `:GitU push`, `:GitU fetch`, `:GitU checkout <branch>`). Running `:GitU` without arguments opens the status viewer.
 - **3-Way Vertical Patch Editor**: Splits the lower half of the status window into `HEAD`, `STAGE`, and `CURRENT` side-by-side in Vim diff mode. Directly updates the Git index on `:w`.
 - **Asynchronous Execution**: Git commands run asynchronously without freezing the editor.
 - **Dedicated Filetypes & Syntax**: Clean syntax highlighting and isolated buffer keymaps.
@@ -30,6 +31,12 @@ A Vim plugin for Git operations, written in Vim9 script.
 " Open interactive Git status
 :GitUStatus
 :GitU
+
+" Run arbitrary Git commands asynchronously with completion
+:GitU push
+:GitU fetch --prune
+:GitU checkout <branch>
+:GitU stash pop
 
 " Open commit editor in a new tab (write and close :wq to commit)
 :GitUCommit

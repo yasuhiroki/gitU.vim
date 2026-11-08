@@ -65,8 +65,21 @@ Vim 8/9 packages: >
         :GitULog <pattern>
 <   Command completion is available for common Git options.
 
+:GitU [args]                                                            *:GitU*
+    When executed without arguments, opens the interactive Git status viewer
+    in a new tab page (same as |:GitUStatus|).
+    When arguments are provided, executes `git <args>` asynchronously in the
+    background without freezing Vim. Command output is displayed via
+    `echomsg` (or highlighted on error), and active status or log views are
+    automatically refreshed on completion.
+    Command completion supports Git subcommands, options, and branches: >
+        :GitU
+        :GitU push origin main
+        :GitU fetch --prune
+        :GitU checkout feature-branch
+        :GitU stash pop
+<
 :GitUStatus                                                      *:GitUStatus*
-:GitU                                                                  *:GitU*
     Opens the interactive Git status viewer in a new tab page.
 
 :GitUCommit [args]                                                *:GitUCommit*
