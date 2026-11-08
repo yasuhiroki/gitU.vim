@@ -53,6 +53,57 @@ def UpdateFileBufferName(state: dict<any>, hist_item: dict<any>)
     endif
 enddef
 
+def LoadCommitDetail(view_id: number, hash: string)
+    var key: string = view.GetKey(view_id)
+    if !has_key(views, key)
+        return
+    endif
+    var state = views[key]
+
+    if hash == '' || hash =~ '^0\+$'
+        buffer.SetLines(state.detail_bufnr, ['Not committed yet (working tree changes).'])
+        return
+    endif
+
+    git.Run(['show', '--stat', '--patch', hash], {
+        cwd: state.cwd,
+        task_key: 'gitu_blame_detail_' .. key,
+        on_exit: (res: dict<any>) => {
+            if !has_key(views, key)
+                return
+            endif
+            var cur_state = views[key]
+            if res.status != 0
+                buffer.SetLines(cur_state.detail_bufnr, empty(res.stderr) ? ['Failed to load commit detail.'] : res.stderr)
+                return
+            endif
+            var lines = empty(res.stdout) ? ['(No diff change)'] : res.stdout
+            buffer.SetLines(cur_state.detail_bufnr, lines)
+            buffer.ResetWindowTop(cur_state.detail_winid)
+        },
+    })
+enddef
+
+export def OnBlameCursorMoved(force: bool = false)
+    var view_id: number = view.GetCurrentId()
+    var key: string = view.GetKey(view_id)
+    if !has_key(views, key)
+        return
+    endif
+    var state = views[key]
+    var entry = GetCurrentLineEntry(state)
+    var hash: string = get(entry, 'hash', '')
+    if hash == ''
+        return
+    endif
+    if !force && hash == state.current_hash
+        return
+    endif
+
+    state.current_hash = hash
+    LoadCommitDetail(view_id, hash)
+enddef
+
 def OnBlameLoaded(view_id: number, res: dict<any>)
     var key: string = view.GetKey(view_id)
     if !has_key(views, key)
@@ -65,6 +116,7 @@ def OnBlameLoaded(view_id: number, res: dict<any>)
         var err_lines: list<string> = empty(res.stderr) ? ['Failed to run git blame.'] : res.stderr
         buffer.SetLines(cur_state.blame_bufnr, err_lines)
         buffer.SetLines(cur_state.file_bufnr, [])
+        buffer.SetLines(cur_state.detail_bufnr, err_lines)
         cur_state.entries = []
         cur_state.loaded = true
         return
@@ -77,6 +129,7 @@ def OnBlameLoaded(view_id: number, res: dict<any>)
         SetWindowsBind(cur_state.blame_winid, cur_state.file_winid, false)
         buffer.SetLines(cur_state.blame_bufnr, ['(Empty file)'])
         buffer.SetLines(cur_state.file_bufnr, [''])
+        buffer.SetLines(cur_state.detail_bufnr, ['(Empty file)'])
         cur_state.loaded = true
         return
     endif
@@ -98,6 +151,10 @@ def OnBlameLoaded(view_id: number, res: dict<any>)
 
     SyncWindowPositions(cur_state.blame_winid, cur_state.file_winid, target_lnum)
     cur_state.loaded = true
+
+    if cur_state.blame_winid > 0 && win_id2win(cur_state.blame_winid) > 0
+        win_execute(cur_state.blame_winid, 'gitu#blame#view#OnBlameCursorMoved(true)')
+    endif
 enddef
 
 def LoadBlame(view_id: number)
@@ -155,12 +212,24 @@ def OnRepoResolved(
     views[key].history_idx = 0
     LoadBlame(view_id)
 enddef
+def SetupDetailPaneMappings()
+    nnoremap <buffer> <silent> q <ScriptCmd>Close()<CR>
+    nnoremap <buffer> <silent> <Tab> <ScriptCmd>CycleFocus(1)<CR>
+    nnoremap <buffer> <silent> <S-Tab> <ScriptCmd>CycleFocus(-1)<CR>
+enddef
+
 def SetupFilePaneMappings()
     nnoremap <buffer> <silent> q <ScriptCmd>Close()<CR>
     nnoremap <buffer> <silent> u <ScriptCmd>Refresh()<CR>
     nnoremap <buffer> <silent> <CR> <ScriptCmd>BlameParent()<CR>
     nnoremap <buffer> <silent> <C-o> <ScriptCmd>HistoryBack()<CR>
     nnoremap <buffer> <silent> <C-i> <ScriptCmd>HistoryForward()<CR>
+    nnoremap <buffer> <silent> <Tab> <ScriptCmd>CycleFocus(1)<CR>
+    nnoremap <buffer> <silent> <S-Tab> <ScriptCmd>CycleFocus(-1)<CR>
+    augroup GitUBlameFilePane
+        autocmd! * <buffer>
+        autocmd CursorMoved <buffer> gitu#blame#view#OnBlameCursorMoved(false)
+    augroup END
 enddef
 
 export def Open(initial_rev: string = '')
@@ -181,6 +250,12 @@ export def Open(initial_rev: string = '')
     tabnew
     t:gitu_view_id = view_id
 
+    var detail_winid: number = win_getid()
+    var detail_bufnr: number = buffer.InitCurrentScratch('gitu-diff', '[GitU:BlameDetail #' .. key .. ']')
+    b:gitu_view_id = view_id
+    SetupDetailPaneMappings()
+
+    rightbelow new
     var blame_winid: number = win_getid()
     var blame_bufnr: number = buffer.InitCurrentScratch('gitu-blame', '[GitU:Blame #' .. key .. ']')
     b:gitu_view_id = view_id
@@ -195,6 +270,12 @@ export def Open(initial_rev: string = '')
     setlocal cursorline
     SetupFilePaneMappings()
 
+    var detail_height: number = get(g:, 'gitu_blame_detail_height', 15)
+    if detail_height > 0
+        setwinvar(detail_winid, '&winfixheight', 1)
+        win_execute(detail_winid, 'resize ' .. string(detail_height))
+    endif
+
     var blame_width: number = get(g:, 'gitu_blame_width', 55)
     if blame_width > 0
         setwinvar(blame_winid, '&winfixwidth', 1)
@@ -207,6 +288,8 @@ export def Open(initial_rev: string = '')
         id: view_id,
         cwd: initial_cwd,
         file_path: file_path,
+        detail_bufnr: detail_bufnr,
+        detail_winid: detail_winid,
         blame_bufnr: blame_bufnr,
         file_bufnr: file_bufnr,
         blame_winid: blame_winid,
@@ -215,8 +298,10 @@ export def Open(initial_rev: string = '')
         history: [],
         history_idx: -1,
         loaded: false,
+        current_hash: '',
     }
 
+    buffer.SetLines(detail_bufnr, ['Loading commit detail and diff...'])
     buffer.SetLines(blame_bufnr, ['Loading git blame...'])
     buffer.SetLines(file_bufnr, ['Loading file...'])
 
@@ -272,6 +357,7 @@ export def BlameParent()
         lnum: target_lnum,
     })
     state.history_idx = len(state.history) - 1
+    state.current_hash = ''
 
     notify.Info(printf('Blaming parent %s (%s)...', prev_hash[0 : 6], prev_file))
     LoadBlame(view_id)
@@ -295,6 +381,7 @@ export def HistoryBack()
     endif
 
     state.history_idx -= 1
+    state.current_hash = ''
     LoadBlame(view_id)
 enddef
 
@@ -316,6 +403,7 @@ export def HistoryForward()
     endif
 
     state.history_idx += 1
+    state.current_hash = ''
     LoadBlame(view_id)
 enddef
 
@@ -379,6 +467,27 @@ export def OpenPullRequestWeb()
     github.OpenPullRequest(state.cwd, hash)
 enddef
 
+export def CycleFocus(direction: number = 1)
+    var view_id: number = view.GetCurrentId()
+    var key: string = view.GetKey(view_id)
+    if !has_key(views, key)
+        return
+    endif
+    var state = views[key]
+    var panes: list<number> = [state.detail_winid, state.blame_winid, state.file_winid]
+    var cur_win: number = win_getid()
+    var idx: number = index(panes, cur_win)
+    if idx < 0
+        idx = 0
+    else
+        idx = (idx + direction + len(panes)) % len(panes)
+    endif
+    var target_win: number = panes[idx]
+    if win_id2win(target_win) > 0
+        win_gotoid(target_win)
+    endif
+enddef
+
 export def Refresh()
     var view_id: number = view.GetCurrentId()
     var key: string = view.GetKey(view_id)
@@ -389,6 +498,7 @@ export def Refresh()
     if !empty(cur_hist)
         cur_hist.lnum = line('.')
     endif
+    views[key].current_hash = ''
     LoadBlame(view_id)
 enddef
 
@@ -402,6 +512,7 @@ export def OnBufWipeout()
     var key: string = view.GetKey(view_id)
     if has_key(views, key)
         git.StopByKey('gitu_blame_' .. key)
+        git.StopByKey('gitu_blame_detail_' .. key)
         remove(views, key)
     endif
 enddef

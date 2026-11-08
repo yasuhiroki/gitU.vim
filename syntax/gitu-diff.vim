@@ -10,6 +10,8 @@ syntax match GitUDiffFile /^diff --git .*$/
 syntax match GitUDiffMeta /^\(index\|new file mode\|deleted file mode\|similarity index\|rename from\|rename to\) .*$/
 syntax match GitUDiffHeader /^\(---\|+++\) .*$/
 syntax match GitUDiffHunk /^@@.*@@.*$/
+syntax match GitUDiffCommitHeader /^\%(commit\>\|Author:\|Date:\|Merge:\)/
+syntax match GitUDiffHash /\<\x\{7,40\}\>/
 
 highlight default link GitUDiffAdded diffAdded
 highlight default link GitUDiffRemoved diffRemoved
@@ -18,6 +20,8 @@ highlight default link GitUDiffFile diffFile
 highlight default link GitUDiffMeta diffIndexLine
 highlight default link GitUDiffHeader diffSubname
 highlight default link GitUDiffHunk diffLine
+highlight default link GitUDiffCommitHeader Keyword
+highlight default link GitUDiffHash Identifier
 
 highlight default link diffAdded Statement
 highlight default link diffRemoved Special

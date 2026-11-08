@@ -24,8 +24,11 @@ nnoremap <buffer> <silent> <C-i> <ScriptCmd>blame.HistoryForward()<CR>
 nnoremap <buffer> <silent> yy <ScriptCmd>blame.YankCommitHash()<CR>
 nnoremap <buffer> <silent> go <ScriptCmd>blame.OpenCommitWeb()<CR>
 nnoremap <buffer> <silent> gp <ScriptCmd>blame.OpenPullRequestWeb()<CR>
+nnoremap <buffer> <silent> <Tab> <ScriptCmd>blame.CycleFocus(1)<CR>
+nnoremap <buffer> <silent> <S-Tab> <ScriptCmd>blame.CycleFocus(-1)<CR>
 
 augroup GitUBlameBuffer
     autocmd! * <buffer>
+    autocmd CursorMoved <buffer> blame.OnBlameCursorMoved(false)
     autocmd BufWipeout <buffer> blame.OnBufWipeout()
 augroup END

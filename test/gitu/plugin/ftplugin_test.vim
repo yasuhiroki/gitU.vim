@@ -142,6 +142,14 @@ def TestBlameKeymaps()
     assert_false(empty(map_q))
     assert_match('blame\.Close()', map_q.rhs)
 
+    var map_tab = maparg('<Tab>', 'n', false, true)
+    assert_false(empty(map_tab))
+    assert_match('blame\.CycleFocus(1)', map_tab.rhs)
+
+    var map_stab = maparg('<S-Tab>', 'n', false, true)
+    assert_false(empty(map_stab))
+    assert_match('blame\.CycleFocus(-1)', map_stab.rhs)
+
     bwipeout!
 enddef
 

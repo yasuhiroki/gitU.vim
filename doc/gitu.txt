@@ -89,8 +89,9 @@ Vim 8/9 packages: >
     Accepts Git commit flags such as `--amend` or `-a`.
 
 :GitUBlame [rev]                                                   *:GitUBlame*
-    Opens the 2-pane interactive Git blame viewer for the current file in a
-    new tab page (Left: commit annotations, Right: file contents).
+    Opens the 3-pane interactive Git blame viewer for the current file in a
+    new tab page (Top: commit metadata and diff, Bottom-left: blame commit
+    annotations, Bottom-right: file contents).
     Press `<CR>` on a commit line to step back to the parent commit prior to
     that change. Use `<C-o>` and `<C-i>` to navigate backward and forward
     through the blame commit history.
@@ -185,6 +186,16 @@ g:gitu_status_height                                    *g:gitu_status_height*
     patch panels.
     Set to 0 or negative to disable resizing and preserve equal splits.
     Default: 15
+
+g:gitu_blame_detail_height                        *g:gitu_blame_detail_height*
+    Height (in rows) of the top commit detail and diff pane in the :GitUBlame
+    view. Set to 0 or negative to disable resizing and preserve equal splits.
+    Default: 15
+
+g:gitu_blame_width                                        *g:gitu_blame_width*
+    Width (in columns) of the bottom-left blame annotation pane in the
+    :GitUBlame view.
+    Default: 55
 
 ==============================================================================
 7. HIGHLIGHTS                                               *gitu-highlights*
