@@ -88,6 +88,13 @@ Vim 8/9 packages: >
     leaving an empty commit message aborts the commit.
     Accepts Git commit flags such as `--amend` or `-a`.
 
+:GitUBlame [rev]                                                   *:GitUBlame*
+    Opens the 2-pane interactive Git blame viewer for the current file in a
+    new tab page (Left: commit annotations, Right: file contents).
+    Press `<CR>` on a commit line to step back to the parent commit prior to
+    that change. Use `<C-o>` and `<C-i>` to navigate backward and forward
+    through the blame commit history.
+
 ==============================================================================
 4. STATUS AND 3-WAY STAGING                                      *gitu-status*
 

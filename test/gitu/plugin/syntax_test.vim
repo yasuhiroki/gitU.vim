@@ -46,11 +46,24 @@ def TestSyntaxStatus()
     bwipeout!
 enddef
 
+def TestSyntaxBlame()
+    enew
+    setlocal filetype=gitu-blame
+    runtime syntax/gitu-blame.vim
+    assert_equal('gitu-blame', &filetype)
+    assert_equal('gitu-blame', b:current_syntax)
+    assert_true(hlID('GitUBlameHash') > 0)
+    assert_true(hlID('GitUBlameAuthor') > 0)
+    assert_true(hlID('GitUBlameDate') > 0)
+    bwipeout!
+enddef
+
 def RunAll()
     TestSyntaxDiff()
     TestSyntaxLog()
     TestSyntaxCommit()
     TestSyntaxStatus()
+    TestSyntaxBlame()
 
     var errors = v:errors
     if len(errors) > 0
