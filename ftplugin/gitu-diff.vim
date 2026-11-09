@@ -19,5 +19,6 @@ setlocal nobuflisted
 nnoremap <buffer> <silent> q <ScriptCmd>log.Close()<CR>
 nnoremap <buffer> <silent> u <ScriptCmd>log.Refresh()<CR>
 nnoremap <buffer> <silent> a <ScriptCmd>log.PromptAction()<CR>
+nnoremap <buffer> <silent> ri <ScriptCmd>log.RebaseInteractive()<CR>
 nnoremap <buffer> <silent> <Tab> <ScriptCmd>log.CycleFocus(1)<CR>
 nnoremap <buffer> <silent> <S-Tab> <ScriptCmd>log.CycleFocus(-1)<CR>

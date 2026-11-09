@@ -642,12 +642,25 @@ enddef
 def ResolveSelectedCommit(): dict<any>
     var view_id: number = view.GetCurrentId()
     var key: string = view.GetKey(view_id)
-    var hash: string = parser.ExtractCommitHash(getline('.'))
-    if hash == '' && has_key(views, key)
+    var cur_line = getline('.')
+    var hash: string = parser.ExtractCommitHash(cur_line)
+    if hash == '' && &filetype !=# 'gitu-log' && has_key(views, key) && empty(views[key].current_special)
         hash = views[key].current_hash
     endif
     var cwd: string = has_key(views, key) ? views[key].cwd : getcwd()
     return { hash: hash, cwd: cwd, view_id: view_id }
+enddef
+
+export def RebaseInteractive()
+    var sel = ResolveSelectedCommit()
+    if !has_key(views, view.GetKey(sel.view_id))
+        return
+    endif
+    if sel.hash == ''
+        notify.Warn('No commit selected for interactive rebase')
+        return
+    endif
+    action.Execute('rebase', sel)
 enddef
 
 export def OpenCommitWeb()

@@ -200,11 +200,21 @@ def TestLogUnstagedStagedStash()
     endtry
 enddef
 
+def TestRebaseInteractiveNoCommit()
+    log.Open()
+    setbufvar(bufnr('%'), '&modifiable', 1)
+    setline('.', '* [Unstaged changes]')
+    setbufvar(bufnr('%'), '&modifiable', 0)
+    log.RebaseInteractive()
+    log.Close()
+enddef
+
 def RunAll()
     TestCommitPanelHeight()
     TestYankCommitHash()
     TestLogStreamingLoad()
     TestLogUnstagedStagedStash()
+    TestRebaseInteractiveNoCommit()
 
     var errors = v:errors
     if len(errors) > 0

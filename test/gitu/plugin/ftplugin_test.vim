@@ -31,6 +31,11 @@ def TestLogKeymaps()
     assert_match('log\.PromptAction()', map_a.rhs)
     assert_equal(1, map_a.buffer)
 
+    var map_ri = maparg('ri', 'n', false, true)
+    assert_false(empty(map_ri))
+    assert_match('log\.RebaseInteractive()', map_ri.rhs)
+    assert_equal(1, map_ri.buffer)
+
     assert_equal(2, exists(':GitULogAction'))
     bwipeout!
 enddef
@@ -58,6 +63,11 @@ def TestCommitKeymaps()
     assert_false(empty(map_c_a))
     assert_match('log\.PromptAction()', map_c_a.rhs)
     assert_equal(1, map_c_a.buffer)
+
+    var map_c_ri = maparg('ri', 'n', false, true)
+    assert_false(empty(map_c_ri))
+    assert_match('log\.RebaseInteractive()', map_c_ri.rhs)
+    assert_equal(1, map_c_ri.buffer)
     bwipeout!
 enddef
 
@@ -74,6 +84,11 @@ def TestDiffKeymaps()
     assert_false(empty(map_d_a))
     assert_match('log\.PromptAction()', map_d_a.rhs)
     assert_equal(1, map_d_a.buffer)
+
+    var map_d_ri = maparg('ri', 'n', false, true)
+    assert_false(empty(map_d_ri))
+    assert_match('log\.RebaseInteractive()', map_d_ri.rhs)
+    assert_equal(1, map_d_ri.buffer)
     bwipeout!
 enddef
 

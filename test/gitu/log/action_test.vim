@@ -16,10 +16,16 @@ enddef
 def TestRegistryAndResolve()
     var list = action.List()
     assert_true(index(list, 'fixup') >= 0)
+    assert_true(index(list, 'rebase') >= 0)
 
     var fixup_def = action.Get('fixup')
     assert_equal('fixup', fixup_def.name)
     assert_equal('f', fixup_def.key)
+
+    var rebase_def = action.Get('rebase')
+    assert_equal('rebase', rebase_def.name)
+    assert_equal('r', rebase_def.key)
+    assert_equal('ri', rebase_def.alias)
 
     assert_equal('fixup', action.Resolve('fixup'))
     assert_equal('fixup', action.Resolve('Fixup'))
@@ -27,6 +33,13 @@ def TestRegistryAndResolve()
     assert_equal('fixup', action.Resolve('f'))
     assert_equal('fixup', action.Resolve('fi'))
     assert_equal('fixup', action.Resolve('fix'))
+
+    assert_equal('rebase', action.Resolve('rebase'))
+    assert_equal('rebase', action.Resolve('Rebase'))
+    assert_equal('rebase', action.Resolve('r'))
+    assert_equal('rebase', action.Resolve('ri'))
+    assert_equal('rebase', action.Resolve('reb'))
+
     assert_equal('', action.Resolve('unknown_action'))
     assert_equal('', action.Resolve(''))
 
@@ -117,10 +130,101 @@ def TestExecuteFixupWithStagedChanges()
     endtry
 enddef
 
+def TestExecuteRebaseNoHash()
+    action.ClearLastActionResult()
+    action.Execute('rebase', {
+        cwd: getcwd(),
+        hash: '',
+        view_id: 1,
+    })
+    assert_equal(-1, action.last_action_result.status)
+    assert_equal('rebase', action.last_action_result.action)
+enddef
+
+def TestExecuteRebaseInteractive()
+    var temp_dir = fnamemodify('./tmp/test_action_rebase', ':p')
+    mkdir(temp_dir, 'p')
+
+    system('git -C ' .. fnameescape(temp_dir) .. ' init -b main')
+    system('git -C ' .. fnameescape(temp_dir) .. ' config user.name "Test"')
+    system('git -C ' .. fnameescape(temp_dir) .. ' config user.email "test@example.com"')
+    writefile(['first'], temp_dir .. '/file.txt')
+    system('git -C ' .. fnameescape(temp_dir) .. ' add file.txt')
+    system('git -C ' .. fnameescape(temp_dir) .. ' commit -m "commit 1"')
+    writefile(['first', 'second'], temp_dir .. '/file.txt')
+    system('git -C ' .. fnameescape(temp_dir) .. ' add file.txt')
+    system('git -C ' .. fnameescape(temp_dir) .. ' commit -m "commit 2"')
+
+    var hash = trim(system('git -C ' .. fnameescape(temp_dir) .. ' rev-parse HEAD'))
+
+    var old_seq_editor = get(environ(), 'GIT_SEQUENCE_EDITOR', '')
+    try
+        setenv('GIT_SEQUENCE_EDITOR', 'true')
+        action.ClearLastActionResult()
+        action.Execute('rebase', {
+            cwd: temp_dir,
+            hash: hash,
+            view_id: 1,
+        })
+
+        var ok = WaitFor(() => !empty(action.last_action_result), 5000)
+        assert_true(ok, 'Timed out waiting for rebase result')
+        assert_equal(0, action.last_action_result.status)
+        assert_equal('rebase', action.last_action_result.action)
+    finally
+        if old_seq_editor != ''
+            setenv('GIT_SEQUENCE_EDITOR', old_seq_editor)
+        else
+            setenv('GIT_SEQUENCE_EDITOR', v:null)
+        endif
+        delete(temp_dir, 'rf')
+    endtry
+enddef
+
+def TestExecuteRebaseInteractiveRoot()
+    var temp_dir = fnamemodify('./tmp/test_action_rebase_root', ':p')
+    mkdir(temp_dir, 'p')
+
+    system('git -C ' .. fnameescape(temp_dir) .. ' init -b main')
+    system('git -C ' .. fnameescape(temp_dir) .. ' config user.name "Test"')
+    system('git -C ' .. fnameescape(temp_dir) .. ' config user.email "test@example.com"')
+    writefile(['first'], temp_dir .. '/file.txt')
+    system('git -C ' .. fnameescape(temp_dir) .. ' add file.txt')
+    system('git -C ' .. fnameescape(temp_dir) .. ' commit -m "root commit"')
+
+    var hash = trim(system('git -C ' .. fnameescape(temp_dir) .. ' rev-parse HEAD'))
+
+    var old_seq_editor = get(environ(), 'GIT_SEQUENCE_EDITOR', '')
+    try
+        setenv('GIT_SEQUENCE_EDITOR', 'true')
+        action.ClearLastActionResult()
+        action.Execute('rebase', {
+            cwd: temp_dir,
+            hash: hash,
+            view_id: 1,
+        })
+
+        var ok = WaitFor(() => !empty(action.last_action_result), 5000)
+        assert_true(ok, 'Timed out waiting for root rebase result')
+        assert_equal(0, action.last_action_result.status)
+        assert_equal('rebase', action.last_action_result.action)
+    finally
+        if old_seq_editor != ''
+            setenv('GIT_SEQUENCE_EDITOR', old_seq_editor)
+        else
+            setenv('GIT_SEQUENCE_EDITOR', v:null)
+        endif
+        delete(temp_dir, 'rf')
+    endtry
+enddef
+
 def RunAll()
     TestRegistryAndResolve()
     TestExecuteFixupNoStagedChanges()
     TestExecuteFixupWithStagedChanges()
+    TestExecuteRebaseNoHash()
+    TestExecuteRebaseInteractive()
+    TestExecuteRebaseInteractiveRoot()
 
     var errors = v:errors
     if len(errors) > 0

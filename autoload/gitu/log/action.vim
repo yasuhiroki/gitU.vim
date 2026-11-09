@@ -35,7 +35,7 @@ export def Resolve(query: string): string
     endif
 
     for [name, item] in items(registry)
-        if get(item, 'key', '') ==# normalized
+        if get(item, 'key', '') ==# normalized || get(item, 'alias', '') ==# normalized
             return name
         endif
     endfor
@@ -110,12 +110,86 @@ def ExecuteFixup(context: dict<any>)
     })
 enddef
 
+def ExecuteRebaseInteractive(context: dict<any>)
+    var hash: string = get(context, 'hash', '')
+    var cwd: string = get(context, 'cwd', '')
+    if hash == '' || cwd == ''
+        notify.Warn('Invalid context for interactive rebase: missing commit hash or repository path')
+        last_action_result = { status: -1, action: 'rebase', message: 'Missing hash or cwd' }
+        return
+    endif
+
+    if !has('terminal')
+        notify.Error('Terminal support (+terminal) is required for interactive rebase')
+        last_action_result = { status: -1, action: 'rebase', message: 'No terminal support' }
+        return
+    endif
+
+    systemlist(['git', '-C', cwd, 'rev-parse', '--verify', hash .. '^'])
+    var has_parent = (v:shell_error == 0)
+    var target = has_parent ? (hash .. '^') : '--root'
+
+    var cmd = ['git', 'rebase', '-i', target]
+
+    var env_dict: dict<string> = {}
+    var cur_env = environ()
+    if has_key(cur_env, 'GIT_SEQUENCE_EDITOR') && cur_env['GIT_SEQUENCE_EDITOR'] != ''
+        env_dict['GIT_SEQUENCE_EDITOR'] = cur_env['GIT_SEQUENCE_EDITOR']
+    else
+        env_dict['GIT_SEQUENCE_EDITOR'] = v:progpath
+    endif
+
+    if has_key(cur_env, 'GIT_EDITOR') && cur_env['GIT_EDITOR'] != ''
+        env_dict['GIT_EDITOR'] = cur_env['GIT_EDITOR']
+    else
+        env_dict['GIT_EDITOR'] = v:progpath
+    endif
+
+    tabnew
+    var term_winid = win_getid()
+
+    var opts = {
+        curwin: 1,
+        cwd: cwd,
+        env: env_dict,
+        term_name: 'git-rebase',
+        exit_cb: (_job: job, status: number) => {
+            last_action_result = { status: status, action: 'rebase' }
+            if status == 0
+                if win_id2win(term_winid) > 0
+                    var tab_info = win_id2tabwin(term_winid)
+                    if tab_info[0] > 0
+                        if tabpagenr('$') > 1
+                            silent! execute 'tabclose ' .. string(tab_info[0])
+                        else
+                            silent! execute 'bwipeout! ' .. string(winbufnr(term_winid))
+                        endif
+                    endif
+                endif
+                notify.Info('Interactive rebase completed successfully')
+            else
+                notify.Warn(printf('Interactive rebase exited with status %d', status))
+            endif
+            view.RefreshAll()
+        },
+    }
+
+    term_start(cmd, opts)
+enddef
+
 def InitBuiltins()
     Register('fixup', {
         name: 'fixup',
         description: 'Create fixup commit for selected commit with staged changes',
         key: 'f',
         execute: (context: dict<any>) => ExecuteFixup(context),
+    })
+    Register('rebase', {
+        name: 'rebase',
+        description: 'Interactive rebase onto parent of selected commit (or --root)',
+        key: 'r',
+        alias: 'ri',
+        execute: (context: dict<any>) => ExecuteRebaseInteractive(context),
     })
 enddef
 
