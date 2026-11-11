@@ -118,6 +118,9 @@ Key Mappings in status buffer:
                         the file under cursor (focus remains on the status window).
     pp                  Open 3-way vertical patch editor (`git add -p`).
     cc                  Open commit editor tab (`:GitUCommit`).
+    gf / <CR>           Open the file under cursor in the current window.
+                        Pressing <C-o> returns cleanly to the status view with
+                        cursor position and side-by-side diff restored.
     <C-j>               Move / scroll downwards in the diff or patch view.
     <C-k>               Move / scroll upwards in the diff or patch view.
     <Tab>               Cycle focus between status, left diff, and right diff panes.

@@ -1,8 +1,8 @@
 vim9script
 
-export def InitCurrentScratch(filetype: string, buf_name: string = ''): number
+export def InitCurrentScratch(filetype: string, buf_name: string = '', bufhidden: string = 'wipe'): number
     setlocal buftype=nofile
-    setlocal bufhidden=wipe
+    execute 'setlocal bufhidden=' .. bufhidden
     setlocal noswapfile
     setlocal nobuflisted
     setlocal nomodifiable

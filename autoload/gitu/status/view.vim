@@ -57,7 +57,15 @@ def LoadStatus(view_id: number)
 
             var first_file_lnum = FindFirstFileLnum(rendered.line_map)
             var target_lnum = cur_lnum
-            if (cur_lnum == 1 || !has_key(rendered.line_map, string(cur_lnum))) && first_file_lnum > 0
+            if state.current_diff_file != ''
+                for [l_str, ent] in items(rendered.line_map)
+                    if get(ent, 'file', '') == state.current_diff_file
+                        target_lnum = str2nr(l_str)
+                        break
+                    endif
+                endfor
+            endif
+            if (target_lnum == 1 || !has_key(rendered.line_map, string(target_lnum))) && first_file_lnum > 0
                 target_lnum = first_file_lnum
             endif
 
@@ -85,7 +93,7 @@ export def Open()
     t:gitu_view_id = view_id
 
     var winid: number = win_getid()
-    var bufnr: number = buffer.InitCurrentScratch('gitu-status', '[GitU:Status #' .. key .. ']')
+    var bufnr: number = buffer.InitCurrentScratch('gitu-status', '[GitU:Status #' .. key .. ']', 'hide')
     b:gitu_view_id = view_id
 
     views[key] = {
@@ -103,6 +111,7 @@ export def Open()
         current_diff_file: '',
         current_diff_section: '',
         cursor_timer: -1,
+        initialized: false,
     }
 
     buffer.SetLines(bufnr, ['Loading git status...'])
@@ -117,6 +126,7 @@ export def Open()
             return
         endif
         views[key].cwd = root
+        views[key].initialized = true
         LoadStatus(view_id)
     })
 enddef
@@ -516,6 +526,62 @@ export def GetState(view_id: number = -1): dict<any>
     return get(views, view.GetKey(id), {})
 enddef
 
+export def GoToFile()
+    var view_id: number = view.GetCurrentId()
+    var key: string = view.GetKey(view_id)
+    if !has_key(views, key)
+        try
+            normal! gf
+        catch
+        endtry
+        return
+    endif
+    var state = views[key]
+    var entry: dict<any> = get(state.line_map, string(line('.')), {})
+    if empty(entry) || get(entry, 'file', '') == ''
+        try
+            normal! gf
+        catch
+        endtry
+        return
+    endif
+
+    var target_path = state.cwd .. '/' .. entry.file
+    CloseDiff(key)
+    normal! m'
+    execute 'edit ' .. fnameescape(target_path)
+enddef
+
+export def OnBufHidden()
+    var view_id: number = view.GetCurrentId()
+    var key: string = view.GetKey(view_id)
+    if has_key(views, key)
+        var state = views[key]
+        if get(state, 'cursor_timer', -1) > 0
+            timer_stop(state.cursor_timer)
+            state.cursor_timer = -1
+        endif
+        CloseDiff(key)
+    endif
+enddef
+
+export def OnBufEnter()
+    var view_id: number = view.GetCurrentId()
+    var key: string = view.GetKey(view_id)
+    if !has_key(views, key)
+        return
+    endif
+    var state = views[key]
+    if !get(state, 'initialized', false)
+        return
+    endif
+    state.winid = win_getid()
+    var left_winid = get(state, 'diff_left_winid', -1)
+    if left_winid <= 0 || win_id2win(left_winid) <= 0
+        Refresh()
+    endif
+enddef
+
 export def OnBufWipeout()
     var view_id: number = view.GetCurrentId()
     var key: string = view.GetKey(view_id)
@@ -534,7 +600,16 @@ export def OnBufWipeout()
 enddef
 
 export def Close()
+    var view_id: number = view.GetCurrentId()
+    var key: string = view.GetKey(view_id)
+    var bufnr: number = -1
+    if has_key(views, key)
+        bufnr = views[key].bufnr
+    endif
     OnBufWipeout()
+    if bufnr > 0 && bufexists(bufnr)
+        silent! execute 'bwipeout! ' .. bufnr
+    endif
     buffer.CloseTabOrReset()
 enddef
 

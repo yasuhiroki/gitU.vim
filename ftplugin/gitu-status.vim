@@ -16,6 +16,7 @@ setlocal signcolumn=no
 setlocal foldcolumn=0
 setlocal nospell
 setlocal nobuflisted
+setlocal bufhidden=hide
 
 nnoremap <buffer> <silent> q <ScriptCmd>status.Close()<CR>
 nnoremap <buffer> <silent> u <ScriptCmd>status.Refresh()<CR>
@@ -26,6 +27,8 @@ xnoremap <buffer> <silent> >> <Esc><ScriptCmd>status.UnstageVisual()<CR>
 nnoremap <buffer> <silent> dd <ScriptCmd>status.ToggleOrOpenDiff()<CR>
 nnoremap <buffer> <silent> pp <ScriptCmd>status.OpenPatchEdit()<CR>
 nnoremap <buffer> <silent> cc <ScriptCmd>commit.Open()<CR>
+nnoremap <buffer> <silent> gf <ScriptCmd>status.GoToFile()<CR>
+nnoremap <buffer> <silent> <CR> <ScriptCmd>status.GoToFile()<CR>
 nnoremap <buffer> <silent> <C-j> <ScriptCmd>status.MoveSubView(1, v:count1)<CR>
 nnoremap <buffer> <silent> <C-k> <ScriptCmd>status.MoveSubView(-1, v:count1)<CR>
 nnoremap <buffer> <silent> <Tab> <ScriptCmd>status.CycleFocus(1)<CR>
@@ -34,5 +37,7 @@ nnoremap <buffer> <silent> <S-Tab> <ScriptCmd>status.CycleFocus(-1)<CR>
 augroup GitUStatusBuffer
     autocmd! * <buffer>
     autocmd CursorMoved <buffer> status.OnStatusCursorMoved()
+    autocmd BufHidden <buffer> status.OnBufHidden()
+    autocmd BufEnter <buffer> status.OnBufEnter()
     autocmd BufWipeout <buffer> status.OnBufWipeout()
 augroup END

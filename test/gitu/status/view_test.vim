@@ -1,5 +1,7 @@
 vim9script
 
+filetype plugin on
+
 import autoload 'gitu/status/view.vim' as status
 import autoload 'gitu/core/buffer.vim'
 
@@ -95,8 +97,66 @@ def TestStatusAutoDiffAndVimdiff()
     endtry
 enddef
 
+def TestStatusGoToFileAndJumpBack()
+    var temp_dir = fnamemodify('./tmp/test_status_gf_' .. localtime(), ':p')
+    mkdir(temp_dir, 'p')
+
+    system('git -C ' .. fnameescape(temp_dir) .. ' init -b main')
+    system('git -C ' .. fnameescape(temp_dir) .. ' config user.name "Test"')
+    system('git -C ' .. fnameescape(temp_dir) .. ' config user.email "test@example.com"')
+
+    var file_path = temp_dir .. '/target.txt'
+    writefile(['target line 1', 'target line 2'], file_path)
+    system('git -C ' .. fnameescape(temp_dir) .. ' add target.txt')
+    system('git -C ' .. fnameescape(temp_dir) .. ' commit -m "initial"')
+
+    writefile(['target line 1 modified'], file_path)
+
+    var orig_cwd = getcwd()
+    try
+        execute 'cd ' .. fnameescape(temp_dir)
+        status.Open()
+
+        var state = status.GetState()
+        var ok = WaitFor((): bool => len(keys(state.line_map)) > 0 && state.diff_left_winid > 0, 3000)
+        assert_true(ok, 'Timed out waiting for status to load')
+
+        var target_l = -1
+        for [l_str, ent] in items(state.line_map)
+            if ent.file == 'target.txt'
+                target_l = str2nr(l_str)
+                break
+            endif
+        endfor
+        assert_true(target_l > 0, 'target.txt line not found')
+
+        cursor(target_l, 1)
+
+        status.GoToFile()
+        assert_equal('target.txt', expand('%:t'), 'GoToFile should open target.txt')
+
+        var cur_state = status.GetState()
+        assert_equal(-1, cur_state.diff_left_winid, 'Diff windows should close when file is opened')
+
+        feedkeys("\<C-o>", 'xt')
+
+        var back_ok = WaitFor((): bool => expand('%:t') =~ '^\[GitU:Status', 3000)
+        assert_true(back_ok, 'C-o should return to status screen')
+        assert_equal(target_l, line('.'), 'Cursor should return to target.txt line')
+
+        var reopened_ok = WaitFor((): bool => status.GetState().diff_left_winid > 0, 3000)
+        assert_true(reopened_ok, 'Diff windows should reopen after returning to status')
+
+        status.Close()
+    finally
+        execute 'cd ' .. fnameescape(orig_cwd)
+        delete(temp_dir, 'rf')
+    endtry
+enddef
+
 def RunAll()
     TestStatusAutoDiffAndVimdiff()
+    TestStatusGoToFileAndJumpBack()
 
     var errors = v:errors
     if len(errors) > 0

@@ -175,6 +175,14 @@ def TestStatusKeymaps()
     assert_false(empty(map_s_stab))
     assert_match('status\.CycleFocus(-1)', map_s_stab.rhs)
 
+    var map_gf = maparg('gf', 'n', false, true)
+    assert_false(empty(map_gf))
+    assert_match('status\.GoToFile()', map_gf.rhs)
+
+    var map_cr = maparg('<CR>', 'n', false, true)
+    assert_false(empty(map_cr))
+    assert_match('status\.GoToFile()', map_cr.rhs)
+
     var map_q = maparg('q', 'n', false, true)
     assert_false(empty(map_q))
     assert_match('status\.Close()', map_q.rhs)
