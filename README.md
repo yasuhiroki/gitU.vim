@@ -15,11 +15,13 @@ A Vim plugin for Git operations, written in Vim9 script.
 - **3-Way Vertical Patch Editor**: Splits the lower half of the status window into `HEAD`, `STAGE`, and `CURRENT` side-by-side in Vim diff mode. Directly updates the Git index on `:w`.
 - **Asynchronous Execution**: Git commands run asynchronously without freezing the editor.
 - **Dedicated Filetypes & Syntax**: Clean syntax highlighting and isolated buffer keymaps.
+- **Optional GitHub CLI (`gh`) Integration (`:GitUIssue`, `:GitUPr`, `:GitUProject`)**: Multi-pane viewers for listing and inspecting GitHub Issues, Pull Requests (with file-filterable diffs), and Projects/items.
 
 ## Requirements
 
 - Vim 9.0 or later (with `vim9script` and `job` support)
 - `git` command
+- *(Optional)* `gh` (GitHub CLI) for `:GitUIssue`, `:GitUPr`, `:GitUProject`, and `:GitUGh`
 
 ## Usage
 
@@ -42,6 +44,14 @@ A Vim plugin for Git operations, written in Vim9 script.
 " Open commit editor in a new tab (write and close :wq to commit)
 :GitUCommit
 :GitUCommit --amend
+
+" Optional GitHub CLI (gh) views (list & show)
+:GitUIssue
+:GitUIssue show 123
+:GitUPr
+:GitUPr show 45
+:GitUProject
+:GitUProject show 1 --owner <owner>
 ```
 
 ### Key Mappings

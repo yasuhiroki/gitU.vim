@@ -35,6 +35,8 @@ Key Features:
 Requirements:
 - Vim 9.0 or later (with `+vim9script` and `+job` support)
 - `git` command in `$PATH`
+- (Optional) `gh` (GitHub CLI) in `$PATH` for `:GitUIssue`, `:GitUPr`,
+  `:GitUProject`, and `:GitUGh` commands.
 
 ==============================================================================
 2. INSTALLATION                                            *gitu-installation*
@@ -101,6 +103,39 @@ Vim 8/9 packages: >
     Press `<CR>` on a commit line to step back to the parent commit prior to
     that change. Use `<C-o>` and `<C-i>` to navigate backward and forward
     through the blame commit history.
+
+:GitUIssue [args]                                                  *:GitUIssue*
+    Opens the 2-pane interactive GitHub Issue viewer (via `gh issue`) in a new
+    tab page (Left: issue list, Right: issue details & comments).
+    Examples: >
+        :GitUIssue
+        :GitUIssue list --state all
+        :GitUIssue show 123
+        :GitUIssue 123
+<
+:GitUPr [args]                                                        *:GitUPr*
+:GitUPR [args]                                                        *:GitUPR*
+    Opens the 3-pane interactive GitHub Pull Request viewer (via `gh pr`) in a
+    new tab page (Left: PR list, Top-right: PR details, comments, and changed
+    files, Bottom-right: PR diff). Selecting a file under `--- Files ---` in
+    the detail pane filters the diff pane to that file.
+    Examples: >
+        :GitUPr
+        :GitUPr list --state all
+        :GitUPr show 45
+        :GitUPr 45
+<
+:GitUProject [args]                                              *:GitUProject*
+    Opens the 3-pane interactive GitHub Project viewer (via `gh project`) in a
+    new tab page (Left: project list, Top-right: project details & item list,
+    Bottom-right: selected project item details).
+    Examples: >
+        :GitUProject
+        :GitUProject list --owner <owner>
+        :GitUProject show 1 --owner <owner>
+<
+:GitUGh {issue|pr|project} [args]                                     *:GitUGh*
+    Umbrella command for `:GitUIssue`, `:GitUPr`, and `:GitUProject`.
 
 ==============================================================================
 4. STATUS AND 3-WAY STAGING                                      *gitu-status*
@@ -241,6 +276,10 @@ g:gitu_blame_width                                        *g:gitu_blame_width*
     :GitUBlame view.
     Default: 55
 
+g:gitu_gh_executable                                    *g:gitu_gh_executable*
+    Executable name or path for GitHub CLI (`gh`).
+    Default: 'gh'
+
 ==============================================================================
 7. HIGHLIGHTS                                               *gitu-highlights*
 
@@ -294,6 +333,8 @@ Diff pane highlights:
     gitu-diff           Buffer filetype for the diff preview pane.
     gitu-status         Buffer filetype for the Git status viewer.
     gitu-stage-head     Buffer filetype for the HEAD panel in 3-way staging.
+    gitu-gh-list        Buffer filetype for the GitHub issue/PR/project list pane.
+    gitu-gh-detail      Buffer filetype for the GitHub issue/PR/project detail pane.
 
 ==============================================================================
 vim:tw=78:ts=8:ft=help:norl:

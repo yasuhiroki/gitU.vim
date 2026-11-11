@@ -222,12 +222,45 @@ def TestBlameKeymaps()
     bwipeout!
 enddef
 
+def TestGhKeymaps()
+    enew
+    buffer.InitCurrentScratch('gitu-gh-list', 'GitUTestKeymapGhList')
+    runtime ftplugin/gitu-gh-list.vim
+
+    var map_u = maparg('u', 'n', false, true)
+    assert_false(empty(map_u))
+    assert_match('gh_view\.Refresh()', map_u.rhs)
+
+    var map_go = maparg('go', 'n', false, true)
+    assert_false(empty(map_go))
+    assert_match('gh_view\.OpenWeb()', map_go.rhs)
+
+    var map_yy = maparg('yy', 'n', false, true)
+    assert_false(empty(map_yy))
+    assert_match('gh_view\.YankNumber()', map_yy.rhs)
+
+    var map_q = maparg('q', 'n', false, true)
+    assert_false(empty(map_q))
+    assert_match('gh_view\.Close()', map_q.rhs)
+    bwipeout!
+
+    enew
+    buffer.InitCurrentScratch('gitu-gh-detail', 'GitUTestKeymapGhDetail')
+    runtime ftplugin/gitu-gh-detail.vim
+
+    var map_d_cr = maparg('<CR>', 'n', false, true)
+    assert_false(empty(map_d_cr))
+    assert_match('gh_view\.SelectDetailItem()', map_d_cr.rhs)
+    bwipeout!
+enddef
+
 def RunAll()
     TestLogKeymaps()
     TestCommitKeymaps()
     TestDiffKeymaps()
     TestStatusKeymaps()
     TestBlameKeymaps()
+    TestGhKeymaps()
 
     var errors = v:errors
     if len(errors) > 0

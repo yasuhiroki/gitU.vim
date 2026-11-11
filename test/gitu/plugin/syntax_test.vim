@@ -58,12 +58,33 @@ def TestSyntaxBlame()
     bwipeout!
 enddef
 
+def TestSyntaxGh()
+    enew
+    setlocal filetype=gitu-gh-list
+    runtime syntax/gitu-gh-list.vim
+    assert_equal('gitu-gh-list', &filetype)
+    assert_equal('gitu-gh-list', b:current_syntax)
+    assert_true(hlID('GitUGhNumber') > 0)
+    assert_true(hlID('GitUGhStateOpen') > 0)
+    bwipeout!
+
+    enew
+    setlocal filetype=gitu-gh-detail
+    runtime syntax/gitu-gh-detail.vim
+    assert_equal('gitu-gh-detail', &filetype)
+    assert_equal('gitu-gh-detail', b:current_syntax)
+    assert_true(hlID('GitUGhHeader') > 0)
+    assert_true(hlID('GitUGhDivider') > 0)
+    bwipeout!
+enddef
+
 def RunAll()
     TestSyntaxDiff()
     TestSyntaxLog()
     TestSyntaxCommit()
     TestSyntaxStatus()
     TestSyntaxBlame()
+    TestSyntaxGh()
 
     var errors = v:errors
     if len(errors) > 0
