@@ -114,9 +114,12 @@ Key Mappings in status buffer:
     <<                  Stage file(s) under cursor or visual selection (`git add`).
     >>                  Unstage file(s) under cursor or visual selection
                         (`git restore --staged`).
-    dd                  Open diff preview for the file under cursor.
+    dd                  Open diff preview for the file under cursor (focus
+                        remains on the status window).
     pp                  Open 3-way vertical patch editor (`git add -p`).
     cc                  Open commit editor tab (`:GitUCommit`).
+    <C-j>               Move / scroll downwards in the diff or patch view.
+    <C-k>               Move / scroll upwards in the diff or patch view.
     u                   Update / refresh the status view.
     q                   Close the status view.
 
@@ -175,6 +178,8 @@ Key Mappings in :GitULog:
                         Opens an interactive terminal buffer using Vim.
     go                  Open the commit on GitHub in the web browser.
     gp                  Open the pull request containing the commit on GitHub.
+    <C-j>               Move / scroll downwards in the diff view.
+    <C-k>               Move / scroll upwards in the diff view.
     <Tab>               Cycle focus forward across panes.
     <S-Tab>             Cycle focus backward across panes.
 

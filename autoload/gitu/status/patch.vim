@@ -82,6 +82,26 @@ export def Close3Way()
     endif
 enddef
 
+export def IsActive(): bool
+    return !empty(current_session) && get(current_session, 'stage_winid', -1) > 0 && win_id2win(current_session.stage_winid) > 0
+enddef
+
+export def MoveView(direction: number, count: number = 1)
+    if !IsActive()
+        return
+    endif
+    var cmd = direction > 0 ? 'j' : 'k'
+    win_execute(current_session.stage_winid, 'normal! ' .. string(count) .. cmd)
+    if get(current_session, 'head_winid', -1) > 0 && win_id2win(current_session.head_winid) > 0
+        win_execute(current_session.head_winid, 'normal! ' .. string(count) .. cmd)
+    endif
+    if get(current_session, 'current_winid', -1) > 0 && win_id2win(current_session.current_winid) > 0
+        win_execute(current_session.current_winid, 'normal! ' .. string(count) .. cmd)
+    endif
+    win_execute(current_session.stage_winid, 'syncbind')
+    redraw
+enddef
+
 export def Open3Way(repo_root: string, rel_file_path: string, status_winid: number = -1, OnClose: any = null, OnSave: any = null)
     var full_path: string = repo_root .. '/' .. rel_file_path
     if !filereadable(full_path)
@@ -120,6 +140,8 @@ export def Open3Way(repo_root: string, rel_file_path: string, status_winid: numb
     setlocal nomodifiable
     diffthis
     nnoremap <buffer> <silent> q <ScriptCmd>Close3Way()<CR>
+    nnoremap <buffer> <silent> <C-j> <ScriptCmd>MoveView(1, v:count1)<CR>
+    nnoremap <buffer> <silent> <C-k> <ScriptCmd>MoveView(-1, v:count1)<CR>
 
     rightbelow vnew
     var stage_winid: number = win_getid()
@@ -142,12 +164,16 @@ export def Open3Way(repo_root: string, rel_file_path: string, status_winid: numb
     augroup END
 
     nnoremap <buffer> <silent> q <ScriptCmd>Close3Way()<CR>
+    nnoremap <buffer> <silent> <C-j> <ScriptCmd>MoveView(1, v:count1)<CR>
+    nnoremap <buffer> <silent> <C-k> <ScriptCmd>MoveView(-1, v:count1)<CR>
 
     rightbelow vnew
     var current_winid: number = win_getid()
     execute 'edit ' .. fnameescape(full_path)
     diffthis
     nnoremap <buffer> <silent> q <ScriptCmd>Close3Way()<CR>
+    nnoremap <buffer> <silent> <C-j> <ScriptCmd>MoveView(1, v:count1)<CR>
+    nnoremap <buffer> <silent> <C-k> <ScriptCmd>MoveView(-1, v:count1)<CR>
 
     var target_filetype: string = &filetype
     if target_filetype == ''

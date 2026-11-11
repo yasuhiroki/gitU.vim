@@ -23,6 +23,8 @@ nnoremap <buffer> <silent> ri <ScriptCmd>log.RebaseInteractive()<CR>
 nnoremap <buffer> <silent> go <ScriptCmd>log.OpenCommitWeb()<CR>
 nnoremap <buffer> <silent> gp <ScriptCmd>log.OpenPullRequestWeb()<CR>
 nnoremap <buffer> <silent> <CR> <ScriptCmd>log.SelectCommitItem()<CR>
+nnoremap <buffer> <silent> <C-j> <ScriptCmd>log.MoveDiffView(1, v:count1)<CR>
+nnoremap <buffer> <silent> <C-k> <ScriptCmd>log.MoveDiffView(-1, v:count1)<CR>
 nnoremap <buffer> <silent> <Tab> <ScriptCmd>log.CycleFocus(1)<CR>
 nnoremap <buffer> <silent> <S-Tab> <ScriptCmd>log.CycleFocus(-1)<CR>
 

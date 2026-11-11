@@ -709,6 +709,21 @@ export def ActionComplete(arg_lead: string, cmd_line: string, cursor_pos: number
     return action.Complete(arg_lead, cmd_line, cursor_pos)
 enddef
 
+export def MoveDiffView(direction: number, count: number = 1)
+    var view_id: number = view.GetCurrentId()
+    var key: string = view.GetKey(view_id)
+    if !has_key(views, key)
+        return
+    endif
+    var state = views[key]
+    var diff_winid: number = get(state, 'diff_winid', -1)
+    if diff_winid > 0 && win_id2win(diff_winid) > 0
+        var cmd = direction > 0 ? 'j' : 'k'
+        win_execute(diff_winid, 'normal! ' .. string(count) .. cmd)
+        redraw
+    endif
+enddef
+
 export def GetState(view_id: number = -1): dict<any>
     var id = view_id > 0 ? view_id : view.GetCurrentId()
     return get(views, view.GetKey(id), {})

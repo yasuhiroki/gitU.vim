@@ -36,6 +36,16 @@ def TestLogKeymaps()
     assert_match('log\.RebaseInteractive()', map_ri.rhs)
     assert_equal(1, map_ri.buffer)
 
+    var map_cj = maparg('<C-j>', 'n', false, true)
+    assert_false(empty(map_cj))
+    assert_match('log\.MoveDiffView(1', map_cj.rhs)
+    assert_equal(1, map_cj.buffer)
+
+    var map_ck = maparg('<C-k>', 'n', false, true)
+    assert_false(empty(map_ck))
+    assert_match('log\.MoveDiffView(-1', map_ck.rhs)
+    assert_equal(1, map_ck.buffer)
+
     assert_equal(2, exists(':GitULogAction'))
     bwipeout!
 enddef
@@ -68,6 +78,16 @@ def TestCommitKeymaps()
     assert_false(empty(map_c_ri))
     assert_match('log\.RebaseInteractive()', map_c_ri.rhs)
     assert_equal(1, map_c_ri.buffer)
+
+    var map_c_cj = maparg('<C-j>', 'n', false, true)
+    assert_false(empty(map_c_cj))
+    assert_match('log\.MoveDiffView(1', map_c_cj.rhs)
+    assert_equal(1, map_c_cj.buffer)
+
+    var map_c_ck = maparg('<C-k>', 'n', false, true)
+    assert_false(empty(map_c_ck))
+    assert_match('log\.MoveDiffView(-1', map_c_ck.rhs)
+    assert_equal(1, map_c_ck.buffer)
     bwipeout!
 enddef
 
@@ -89,6 +109,16 @@ def TestDiffKeymaps()
     assert_false(empty(map_d_ri))
     assert_match('log\.RebaseInteractive()', map_d_ri.rhs)
     assert_equal(1, map_d_ri.buffer)
+
+    var map_d_cj = maparg('<C-j>', 'n', false, true)
+    assert_false(empty(map_d_cj))
+    assert_match('normal!.*j', map_d_cj.rhs)
+    assert_equal(1, map_d_cj.buffer)
+
+    var map_d_ck = maparg('<C-k>', 'n', false, true)
+    assert_false(empty(map_d_ck))
+    assert_match('normal!.*k', map_d_ck.rhs)
+    assert_equal(1, map_d_ck.buffer)
     bwipeout!
 enddef
 
@@ -128,6 +158,14 @@ def TestStatusKeymaps()
     var map_commit = maparg('cc', 'n', false, true)
     assert_false(empty(map_commit))
     assert_match('commit\.Open()', map_commit.rhs)
+
+    var map_s_cj = maparg('<C-j>', 'n', false, true)
+    assert_false(empty(map_s_cj))
+    assert_match('status\.MoveSubView(1', map_s_cj.rhs)
+
+    var map_s_ck = maparg('<C-k>', 'n', false, true)
+    assert_false(empty(map_s_ck))
+    assert_match('status\.MoveSubView(-1', map_s_ck.rhs)
 
     var map_q = maparg('q', 'n', false, true)
     assert_false(empty(map_q))

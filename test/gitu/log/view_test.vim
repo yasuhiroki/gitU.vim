@@ -209,12 +209,32 @@ def TestRebaseInteractiveNoCommit()
     log.Close()
 enddef
 
+def TestMoveDiffView()
+    log.Open()
+    var state = log.GetState()
+    assert_true(state.diff_winid > 0)
+    setbufvar(state.diff_bufnr, '&modifiable', 1)
+    setbufline(state.diff_bufnr, 1, range(1, 20))
+    setbufvar(state.diff_bufnr, '&modifiable', 0)
+
+    assert_equal(1, getcurpos(state.diff_winid)[1])
+
+    log.MoveDiffView(1, 5)
+    assert_equal(6, getcurpos(state.diff_winid)[1])
+
+    log.MoveDiffView(-1, 3)
+    assert_equal(3, getcurpos(state.diff_winid)[1])
+
+    log.Close()
+enddef
+
 def RunAll()
     TestCommitPanelHeight()
     TestYankCommitHash()
     TestLogStreamingLoad()
     TestLogUnstagedStagedStash()
     TestRebaseInteractiveNoCommit()
+    TestMoveDiffView()
 
     var errors = v:errors
     if len(errors) > 0

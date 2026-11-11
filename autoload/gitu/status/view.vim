@@ -246,12 +246,17 @@ export def OpenDiff()
 
     var diff_bufnr: number = buffer.InitCurrentScratch('gitu-diff', printf('[GitU:Diff: %s (%s)]', entry.file, entry.section))
     state.diff_bufnr = diff_bufnr
+    b:gitu_view_id = view_id
     nnoremap <buffer> <silent> q <cmd>close<CR>
     buffer.SetLines(diff_bufnr, ['Loading diff...'])
 
     if status_height > 0 && state.winid > 0 && win_id2win(state.winid) > 0
         setwinvar(state.winid, '&winfixheight', 1)
         win_execute(state.winid, 'resize ' .. string(status_height))
+    endif
+
+    if state.winid > 0 && win_id2win(state.winid) > 0
+        win_gotoid(state.winid)
     endif
 
     var args: list<string> = parser.BuildDiffArgs(entry.section, entry.file)
@@ -279,6 +284,31 @@ export def OpenDiff()
             endif
         },
     })
+enddef
+
+export def MoveSubView(direction: number, count: number = 1)
+    if patch.IsActive()
+        patch.MoveView(direction, count)
+        return
+    endif
+
+    var view_id: number = view.GetCurrentId()
+    var key: string = view.GetKey(view_id)
+    if !has_key(views, key)
+        return
+    endif
+    var state = views[key]
+    var diff_winid: number = get(state, 'diff_winid', -1)
+    if diff_winid > 0 && win_id2win(diff_winid) > 0
+        var cmd = direction > 0 ? 'j' : 'k'
+        win_execute(diff_winid, 'normal! ' .. string(count) .. cmd)
+        redraw
+    endif
+enddef
+
+export def GetState(view_id: number = -1): dict<any>
+    var id = view_id > 0 ? view_id : view.GetCurrentId()
+    return get(views, view.GetKey(id), {})
 enddef
 
 export def OnBufWipeout()

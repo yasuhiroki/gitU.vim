@@ -64,6 +64,10 @@ def TestOpen3Way()
     assert_equal(4, winnr('$'))
     assert_equal(15, winheight(status_winid))
     assert_match('\[GitU:STAGE\] test\.txt$', bufname('%'))
+    assert_true(patch.IsActive())
+
+    patch.MoveView(1, 1)
+    patch.MoveView(-1, 1)
 
     setline(1, 'staged content')
     write
@@ -74,6 +78,7 @@ def TestOpen3Way()
     assert_equal('staged content', staged_out)
 
     patch.Close3Way()
+    assert_false(patch.IsActive())
     assert_true(callback_called)
     assert_equal(1, winnr('$'))
     assert_equal(status_winid, win_getid())
