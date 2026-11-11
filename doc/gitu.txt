@@ -114,14 +114,28 @@ Key Mappings in status buffer:
     <<                  Stage file(s) under cursor or visual selection (`git add`).
     >>                  Unstage file(s) under cursor or visual selection
                         (`git restore --staged`).
-    dd                  Open diff preview for the file under cursor (focus
-                        remains on the status window).
+    dd                  Toggle or open side-by-side diff (vimdiff) preview for
+                        the file under cursor (focus remains on the status window).
     pp                  Open 3-way vertical patch editor (`git add -p`).
     cc                  Open commit editor tab (`:GitUCommit`).
     <C-j>               Move / scroll downwards in the diff or patch view.
     <C-k>               Move / scroll upwards in the diff or patch view.
+    <Tab>               Cycle focus between status, left diff, and right diff panes.
+    <S-Tab>             Cycle focus backward across panes.
     u                   Update / refresh the status view.
     q                   Close the status view.
+
+When :GitUStatus is displayed, it automatically displays the side-by-side
+(vimdiff) diff for the first changed file at the bottom, split into left (old)
+and right (new) panes with Vim diff mode (`diffthis`). Moving the cursor
+between files automatically updates the diff.
+
+    +-----------------------------------------------------------+
+    | [GitU:Status] (height: g:gitu_status_height, default: 15) |
+    +-----------------------------+-----------------------------+
+    | [GitU:OLD] (e.g. HEAD/STAGE)| [GitU:NEW] (STAGE/WORKTREE) |
+    | (diffthis)                  | (diffthis)                  |
+    +-----------------------------+-----------------------------+
 
 The 3-Way Patch Editor (`pp`):
 When pressing `pp` on a file line, the status window splits at the bottom

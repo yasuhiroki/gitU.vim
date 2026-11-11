@@ -23,13 +23,16 @@ nnoremap <buffer> <silent> << <ScriptCmd>status.StageCurrent()<CR>
 nnoremap <buffer> <silent> >> <ScriptCmd>status.UnstageCurrent()<CR>
 xnoremap <buffer> <silent> << <Esc><ScriptCmd>status.StageVisual()<CR>
 xnoremap <buffer> <silent> >> <Esc><ScriptCmd>status.UnstageVisual()<CR>
-nnoremap <buffer> <silent> dd <ScriptCmd>status.OpenDiff()<CR>
+nnoremap <buffer> <silent> dd <ScriptCmd>status.ToggleOrOpenDiff()<CR>
 nnoremap <buffer> <silent> pp <ScriptCmd>status.OpenPatchEdit()<CR>
 nnoremap <buffer> <silent> cc <ScriptCmd>commit.Open()<CR>
 nnoremap <buffer> <silent> <C-j> <ScriptCmd>status.MoveSubView(1, v:count1)<CR>
 nnoremap <buffer> <silent> <C-k> <ScriptCmd>status.MoveSubView(-1, v:count1)<CR>
+nnoremap <buffer> <silent> <Tab> <ScriptCmd>status.CycleFocus(1)<CR>
+nnoremap <buffer> <silent> <S-Tab> <ScriptCmd>status.CycleFocus(-1)<CR>
 
 augroup GitUStatusBuffer
     autocmd! * <buffer>
+    autocmd CursorMoved <buffer> status.OnStatusCursorMoved()
     autocmd BufWipeout <buffer> status.OnBufWipeout()
 augroup END

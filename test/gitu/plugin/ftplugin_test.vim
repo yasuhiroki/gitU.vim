@@ -149,7 +149,7 @@ def TestStatusKeymaps()
 
     var map_diff = maparg('dd', 'n', false, true)
     assert_false(empty(map_diff))
-    assert_match('status\.OpenDiff()', map_diff.rhs)
+    assert_match('status\.ToggleOrOpenDiff()', map_diff.rhs)
 
     var map_patch = maparg('pp', 'n', false, true)
     assert_false(empty(map_patch))
@@ -166,6 +166,14 @@ def TestStatusKeymaps()
     var map_s_ck = maparg('<C-k>', 'n', false, true)
     assert_false(empty(map_s_ck))
     assert_match('status\.MoveSubView(-1', map_s_ck.rhs)
+
+    var map_s_tab = maparg('<Tab>', 'n', false, true)
+    assert_false(empty(map_s_tab))
+    assert_match('status\.CycleFocus(1)', map_s_tab.rhs)
+
+    var map_s_stab = maparg('<S-Tab>', 'n', false, true)
+    assert_false(empty(map_s_stab))
+    assert_match('status\.CycleFocus(-1)', map_s_stab.rhs)
 
     var map_q = maparg('q', 'n', false, true)
     assert_false(empty(map_q))
