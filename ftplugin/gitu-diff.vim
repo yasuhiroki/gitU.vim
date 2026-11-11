@@ -20,7 +20,7 @@ nnoremap <buffer> <silent> q <ScriptCmd>log.Close()<CR>
 nnoremap <buffer> <silent> u <ScriptCmd>log.Refresh()<CR>
 nnoremap <buffer> <silent> a <ScriptCmd>log.PromptAction()<CR>
 nnoremap <buffer> <silent> ri <ScriptCmd>log.RebaseInteractive()<CR>
-nnoremap <buffer> <silent> <C-j> <Cmd>execute 'normal! ' .. v:count1 .. 'j'<CR>
-nnoremap <buffer> <silent> <C-k> <Cmd>execute 'normal! ' .. v:count1 .. 'k'<CR>
+nnoremap <buffer> <silent> <expr> <C-j> v:count1 .. "\<C-e>"
+nnoremap <buffer> <silent> <expr> <C-k> v:count1 .. "\<C-y>"
 nnoremap <buffer> <silent> <Tab> <ScriptCmd>log.CycleFocus(1)<CR>
 nnoremap <buffer> <silent> <S-Tab> <ScriptCmd>log.CycleFocus(-1)<CR>

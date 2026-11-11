@@ -112,12 +112,12 @@ def TestDiffKeymaps()
 
     var map_d_cj = maparg('<C-j>', 'n', false, true)
     assert_false(empty(map_d_cj))
-    assert_match('normal!.*j', map_d_cj.rhs)
+    assert_match('C-e', map_d_cj.rhs)
     assert_equal(1, map_d_cj.buffer)
 
     var map_d_ck = maparg('<C-k>', 'n', false, true)
     assert_false(empty(map_d_ck))
-    assert_match('normal!.*k', map_d_ck.rhs)
+    assert_match('C-y', map_d_ck.rhs)
     assert_equal(1, map_d_ck.buffer)
     bwipeout!
 enddef

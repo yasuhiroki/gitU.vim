@@ -64,16 +64,17 @@ def TestStatusOpenDiffFocusAndMove()
         setbufline(state.diff_bufnr, 1, range(1, 20))
         setbufvar(state.diff_bufnr, '&modifiable', 0)
 
-        assert_equal(1, getcurpos(state.diff_winid)[1])
+        assert_equal(1, getwininfo(state.diff_winid)[0].topline)
 
-        # Move subview down by 5 lines while in status window
+        # Scroll subview down by 5 lines while in status window
         status.MoveSubView(1, 5)
-        assert_equal(6, getcurpos(state.diff_winid)[1])
+        assert_equal(6, getwininfo(state.diff_winid)[0].topline)
         assert_equal(state.winid, win_getid(), 'Focus should still be on status window')
 
-        # Move subview up by 2 lines
+        # Scroll subview up by 2 lines: topline scrolls to 4, cursor does not move
         status.MoveSubView(-1, 2)
-        assert_equal(4, getcurpos(state.diff_winid)[1])
+        assert_equal(4, getwininfo(state.diff_winid)[0].topline)
+        assert_equal(6, getcurpos(state.diff_winid)[1])
 
         status.Close()
     finally

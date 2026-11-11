@@ -90,13 +90,14 @@ export def MoveView(direction: number, count: number = 1)
     if !IsActive()
         return
     endif
-    var cmd = direction > 0 ? 'j' : 'k'
-    win_execute(current_session.stage_winid, 'normal! ' .. string(count) .. cmd)
+    var scroll_char = direction > 0 ? "\<C-e>" : "\<C-y>"
+    var feed_cmd = printf('call feedkeys("%d%s", "xt")', count, scroll_char)
+    win_execute(current_session.stage_winid, feed_cmd)
     if get(current_session, 'head_winid', -1) > 0 && win_id2win(current_session.head_winid) > 0
-        win_execute(current_session.head_winid, 'normal! ' .. string(count) .. cmd)
+        win_execute(current_session.head_winid, feed_cmd)
     endif
     if get(current_session, 'current_winid', -1) > 0 && win_id2win(current_session.current_winid) > 0
-        win_execute(current_session.current_winid, 'normal! ' .. string(count) .. cmd)
+        win_execute(current_session.current_winid, feed_cmd)
     endif
     win_execute(current_session.stage_winid, 'syncbind')
     redraw

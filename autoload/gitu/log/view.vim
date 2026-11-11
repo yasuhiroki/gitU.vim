@@ -718,8 +718,8 @@ export def MoveDiffView(direction: number, count: number = 1)
     var state = views[key]
     var diff_winid: number = get(state, 'diff_winid', -1)
     if diff_winid > 0 && win_id2win(diff_winid) > 0
-        var cmd = direction > 0 ? 'j' : 'k'
-        win_execute(diff_winid, 'normal! ' .. string(count) .. cmd)
+        var scroll_char = direction > 0 ? "\<C-e>" : "\<C-y>"
+        win_execute(diff_winid, printf('call feedkeys("%d%s", "xt")', count, scroll_char))
         redraw
     endif
 enddef

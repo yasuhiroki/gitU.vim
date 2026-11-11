@@ -217,13 +217,14 @@ def TestMoveDiffView()
     setbufline(state.diff_bufnr, 1, range(1, 20))
     setbufvar(state.diff_bufnr, '&modifiable', 0)
 
-    assert_equal(1, getcurpos(state.diff_winid)[1])
+    assert_equal(1, getwininfo(state.diff_winid)[0].topline)
 
     log.MoveDiffView(1, 5)
-    assert_equal(6, getcurpos(state.diff_winid)[1])
+    assert_equal(6, getwininfo(state.diff_winid)[0].topline)
 
     log.MoveDiffView(-1, 3)
-    assert_equal(3, getcurpos(state.diff_winid)[1])
+    assert_equal(3, getwininfo(state.diff_winid)[0].topline)
+    assert_equal(6, getcurpos(state.diff_winid)[1])
 
     log.Close()
 enddef
