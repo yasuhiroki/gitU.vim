@@ -179,6 +179,10 @@ def TestStatusKeymaps()
     assert_false(empty(map_gf))
     assert_match('status\.GoToFile()', map_gf.rhs)
 
+    var map_o = maparg('o', 'n', false, true)
+    assert_false(empty(map_o))
+    assert_match('status\.GoToFile()', map_o.rhs)
+
     var map_cr = maparg('<CR>', 'n', false, true)
     assert_false(empty(map_cr))
     assert_match('status\.GoToFile()', map_cr.rhs)

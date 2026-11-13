@@ -153,7 +153,7 @@ Key Mappings in status buffer:
                         the file under cursor (focus remains on the status window).
     pp                  Open 3-way vertical patch editor (`git add -p`).
     cc                  Open commit editor tab (`:GitUCommit`).
-    gf / <CR>           Open the file under cursor in the current window.
+    o / gf / <CR>       Open the file under cursor in the current window.
                         Pressing <C-o> returns cleanly to the status view with
                         cursor position and side-by-side diff restored.
     <C-j>               Move / scroll downwards in the diff or patch view.
@@ -163,10 +163,13 @@ Key Mappings in status buffer:
     u                   Update / refresh the status view.
     q                   Close the status view.
 
-When :GitUStatus is displayed, it automatically displays the side-by-side
-(vimdiff) diff for the first changed file at the bottom, split into left (old)
-and right (new) panes with Vim diff mode (`diffthis`). Moving the cursor
-between files automatically updates the diff.
+When :GitUStatus is initially opened, the side-by-side diff is hidden.
+Pressing `dd` opens the side-by-side (vimdiff) diff at the bottom, split into
+left (old) and right (new) panes with Vim diff mode (`diffthis`). While the
+diff is open, moving the cursor between files automatically updates the diff.
+Files with large diffs (pre-detected via `git diff --numstat` and file size)
+are delayed by `g:gitu_large_diff_delay` (default: 3000ms) after the cursor
+lands on them to keep cursor movement smooth.
 
     +-----------------------------------------------------------+
     | [GitU:Status] (height: g:gitu_status_height, default: 15) |
@@ -265,6 +268,26 @@ g:gitu_status_height                                    *g:gitu_status_height*
     patch panels.
     Set to 0 or negative to disable resizing and preserve equal splits.
     Default: 15
+
+g:gitu_diff_delay                                          *g:gitu_diff_delay*
+    Debounce delay (in milliseconds) before updating the side-by-side diff
+    when moving the cursor over normal files in :GitUStatus.
+    Default: 50
+
+g:gitu_large_diff_delay                              *g:gitu_large_diff_delay*
+    Delay (in milliseconds) before rendering the side-by-side diff when moving
+    the cursor onto a file with a large diff in :GitUStatus.
+    Default: 3000
+
+g:gitu_large_diff_lines                              *g:gitu_large_diff_lines*
+    Line-change threshold (`added + deleted` lines from `git diff --numstat`)
+    at or above which a file is considered to have a large diff.
+    Default: 500
+
+g:gitu_large_diff_bytes                              *g:gitu_large_diff_bytes*
+    File size threshold (in bytes) at or above which a file in the working tree
+    is considered to have a large diff.
+    Default: 102400 (100 KB)
 
 g:gitu_blame_detail_height                        *g:gitu_blame_detail_height*
     Height (in rows) of the top commit detail and diff pane in the :GitUBlame

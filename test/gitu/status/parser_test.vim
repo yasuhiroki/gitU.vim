@@ -86,11 +86,27 @@ def TestGetSelectedFiles()
     assert_equal([], parser.GetSelectedFiles(state, 0, 0, 'stage'))
 enddef
 
+def TestParseNumstat()
+    var input = [
+        "10\t20\tsrc/foo.txt",
+        "-\t-\tassets/image.png",
+        "600\t5\t{old => new}/large.txt",
+        "3\t4\told_name.txt => new_name.txt",
+    ]
+
+    var stats = parser.ParseNumstat(input)
+    assert_equal({ added: 10, deleted: 20, total: 30, is_binary: false }, stats['src/foo.txt'])
+    assert_equal({ added: 0, deleted: 0, total: 0, is_binary: true }, stats['assets/image.png'])
+    assert_equal({ added: 600, deleted: 5, total: 605, is_binary: false }, stats['new/large.txt'])
+    assert_equal({ added: 3, deleted: 4, total: 7, is_binary: false }, stats['new_name.txt'])
+enddef
+
 def RunAll()
     TestParsePorcelain()
     TestRenderStatus()
     TestBuildDiffArgs()
     TestGetSelectedFiles()
+    TestParseNumstat()
 
     var errors = v:errors
     if len(errors) > 0

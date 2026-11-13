@@ -116,6 +116,42 @@ export def BuildDiffArgs(section: string, file_path: string): list<string>
     return ['diff', '--', file_path]
 enddef
 
+export def ParseNumstat(lines: list<string>): dict<dict<any>>
+    var stats: dict<dict<any>> = {}
+    for line in lines
+        if line == ''
+            continue
+        endif
+        var parts = split(line, "\t")
+        if len(parts) < 3
+            continue
+        endif
+        var is_binary = (parts[0] == '-' || parts[1] == '-')
+        var added = is_binary ? 0 : str2nr(parts[0])
+        var deleted = is_binary ? 0 : str2nr(parts[1])
+        var raw_path = parts[2]
+        var file_path = raw_path
+        if raw_path =~ ' => '
+            var rename_matches = matchlist(raw_path, '\v^(.*)\{[^{}]* \=\> ([^{}]*)\}(.*)$')
+            if len(rename_matches) >= 4
+                file_path = rename_matches[1] .. rename_matches[2] .. rename_matches[3]
+            else
+                var arrow_parts = split(raw_path, ' => ')
+                if len(arrow_parts) >= 2
+                    file_path = arrow_parts[-1]
+                endif
+            endif
+        endif
+        stats[file_path] = {
+            added: added,
+            deleted: deleted,
+            total: added + deleted,
+            is_binary: is_binary,
+        }
+    endfor
+    return stats
+enddef
+
 export def GetSelectedFiles(state: dict<any>, start_lnum: number, end_lnum: number, action: string): list<string>
     if start_lnum <= 0 || end_lnum <= 0
         return []
