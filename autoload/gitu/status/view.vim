@@ -92,12 +92,74 @@ def GetBlobLines(cwd: string, rev_path: string): list<string>
     return empty(lines) ? [''] : lines
 enddef
 
-def SetScratchBufName(winid: number, bufnr: number, name: string)
+export def IsStatusDiffBuffer(bufnr: number): bool
+    if bufnr <= 0 || !bufexists(bufnr)
+        return false
+    endif
+    var ft = getbufvar(bufnr, '&filetype')
+    if ft == 'gitu-diff' || ft == 'gitu-stage-head'
+        return true
+    endif
+    var name = bufname(bufnr)
+    if name =~ '\[GitU:\(Diff\|STAGE\|WORKTREE\|HEAD\|BASE\)'
+        return true
+    endif
+    return false
+enddef
+
+export def CleanDiffJumpList(winid: number = 0)
+    var target_win = winid > 0 && win_id2win(winid) > 0 ? winid : win_getid()
+    var jl = getjumplist(target_win)
+    var wiped: dict<bool> = {}
+    if !empty(jl) && !empty(jl[0])
+        for item in jl[0]
+            var bnr = get(item, 'bufnr', -1)
+            if bnr > 0 && !has_key(wiped, string(bnr)) && IsStatusDiffBuffer(bnr)
+                if empty(win_findbuf(bnr))
+                    silent! execute 'bwipeout! ' .. bnr
+                    wiped[string(bnr)] = true
+                endif
+            endif
+        endfor
+    endif
+    for bnr in range(1, bufnr('$'))
+        if !has_key(wiped, string(bnr)) && IsStatusDiffBuffer(bnr) && empty(win_findbuf(bnr))
+            silent! execute 'bwipeout! ' .. bnr
+            wiped[string(bnr)] = true
+        endif
+    endfor
+enddef
+
+def SetupDiffPaneBuffer(winid: number, view_id: number, name: string, lines: list<string>): number
+    var cur_win = win_getid()
+    noautocmd win_gotoid(winid)
+    diffoff
+
     var existing = bufnr('^' .. escape(name, '[]\.*^$~') .. '$')
-    if existing > 0 && existing != bufnr && bufexists(existing)
+    if existing > 0 && existing != bufnr('%') && bufexists(existing) && empty(win_findbuf(existing))
         silent! execute 'bwipeout! ' .. existing
     endif
-    win_execute(winid, 'silent! noautocmd keepalt file ' .. fnameescape(name))
+
+    if bufname('%') != ''
+        keepjumps keepalt noautocmd enew!
+    endif
+
+    var bufnr = buffer.InitCurrentScratch('gitu-diff', name, 'wipe')
+    b:gitu_view_id = view_id
+    nnoremap <buffer> <silent> q <ScriptCmd>status.CloseDiff()<CR>
+    nnoremap <buffer> <silent> <expr> <C-j> v:count1 .. "\<C-e>"
+    nnoremap <buffer> <silent> <expr> <C-k> v:count1 .. "\<C-y>"
+    nnoremap <buffer> <silent> <Tab> <ScriptCmd>status.CycleFocus(1)<CR>
+    nnoremap <buffer> <silent> <S-Tab> <ScriptCmd>status.CycleFocus(-1)<CR>
+
+    buffer.SetLines(bufnr, lines)
+    filetype detect
+    clearjumps
+
+    if cur_win > 0 && win_id2win(cur_win) > 0
+        noautocmd win_gotoid(cur_win)
+    endif
+    return bufnr
 enddef
 
 def ApplyDiffStatToState(
@@ -267,9 +329,10 @@ def CloseDiffWindows(state: dict<any>)
     if state.winid > 0 && win_id2win(state.winid) > 0
         setwinvar(state.winid, '&winfixheight', 0)
         if IsStatusBufferVisible(state)
-            win_gotoid(state.winid)
+            noautocmd win_gotoid(state.winid)
         endif
     endif
+    CleanDiffJumpList(state.winid)
 enddef
 
 def LoadStatus(view_id: number)
@@ -300,10 +363,6 @@ def LoadStatus(view_id: number)
             var cur_lnum: number = IsStatusBufferVisible(cur_state)
                 ? getcurpos(cur_state.winid)[1]
                 : 1
-            if get(cur_state, 'saved_lnum', 0) > 0
-                cur_lnum = cur_state.saved_lnum
-                cur_state.saved_lnum = 0
-            endif
 
             buffer.SetLines(cur_state.bufnr, rendered.lines)
             PrefetchDiffStats(view_id)
@@ -315,7 +374,7 @@ def LoadStatus(view_id: number)
             endif
 
             if IsStatusBufferVisible(cur_state)
-                win_execute(cur_state.winid, 'normal! ' .. string(target_lnum) .. 'G0')
+                win_execute(cur_state.winid, 'keepjumps normal! ' .. string(target_lnum) .. 'G0')
             endif
 
             if cur_state.diff_enabled && IsStatusActive(cur_state)
@@ -342,6 +401,7 @@ export def Open()
     var winid: number = win_getid()
     var bufnr: number = buffer.InitCurrentScratch('gitu-status', '[GitU:Status #' .. key .. ']', 'hide')
     b:gitu_view_id = view_id
+    CleanDiffJumpList(winid)
 
     views[key] = {
         id: view_id,
@@ -362,7 +422,6 @@ export def Open()
         current_diff_section: '',
         cursor_timer: -1,
         is_hidden: false,
-        saved_lnum: 0,
         initialized: false,
     }
 
@@ -577,32 +636,15 @@ export def OpenDiff(target_lnum: number = -1, explicit_view_id: number = -1)
     if !IsDiffOpen(state)
         CloseDiffWindows(state)
 
-        botright new
+        noautocmd keepjumps botright new
         left_winid = win_getid()
-        left_bufnr = buffer.InitCurrentScratch('gitu-diff', '[GitU:Diff-Left]')
-        b:gitu_view_id = view_id
-        nnoremap <buffer> <silent> q <ScriptCmd>status.CloseDiff()<CR>
-        nnoremap <buffer> <silent> <expr> <C-j> v:count1 .. "\<C-e>"
-        nnoremap <buffer> <silent> <expr> <C-k> v:count1 .. "\<C-y>"
-        nnoremap <buffer> <silent> <Tab> <ScriptCmd>status.CycleFocus(1)<CR>
-        nnoremap <buffer> <silent> <S-Tab> <ScriptCmd>status.CycleFocus(-1)<CR>
 
-        rightbelow vnew
+        noautocmd keepjumps rightbelow vnew
         right_winid = win_getid()
-        right_bufnr = buffer.InitCurrentScratch('gitu-diff', '[GitU:Diff-Right]')
-        b:gitu_view_id = view_id
-        nnoremap <buffer> <silent> q <ScriptCmd>status.CloseDiff()<CR>
-        nnoremap <buffer> <silent> <expr> <C-j> v:count1 .. "\<C-e>"
-        nnoremap <buffer> <silent> <expr> <C-k> v:count1 .. "\<C-y>"
-        nnoremap <buffer> <silent> <Tab> <ScriptCmd>status.CycleFocus(1)<CR>
-        nnoremap <buffer> <silent> <S-Tab> <ScriptCmd>status.CycleFocus(-1)<CR>
 
         state.diff_left_winid = left_winid
         state.diff_right_winid = right_winid
-        state.diff_left_bufnr = left_bufnr
-        state.diff_right_bufnr = right_bufnr
         state.diff_winid = left_winid
-        state.diff_bufnr = left_bufnr
     endif
 
     var left_lines: list<string> = []
@@ -638,17 +680,12 @@ export def OpenDiff(target_lnum: number = -1, explicit_view_id: number = -1)
         right_name = printf('[GitU:WORKTREE] %s', entry.file)
     endif
 
-    win_execute(left_winid, 'diffoff')
-    win_execute(right_winid, 'diffoff')
+    left_bufnr = SetupDiffPaneBuffer(left_winid, view_id, left_name, left_lines)
+    right_bufnr = SetupDiffPaneBuffer(right_winid, view_id, right_name, right_lines)
 
-    buffer.SetLines(left_bufnr, left_lines)
-    SetScratchBufName(left_winid, left_bufnr, left_name)
-
-    buffer.SetLines(right_bufnr, right_lines)
-    SetScratchBufName(right_winid, right_bufnr, right_name)
-
-    win_execute(left_winid, 'filetype detect')
-    win_execute(right_winid, 'filetype detect')
+    state.diff_left_bufnr = left_bufnr
+    state.diff_right_bufnr = right_bufnr
+    state.diff_bufnr = left_bufnr
 
     win_execute(left_winid, 'diffthis')
     win_execute(right_winid, 'diffthis')
@@ -663,8 +700,9 @@ export def OpenDiff(target_lnum: number = -1, explicit_view_id: number = -1)
     endif
 
     if IsStatusBufferVisible(state)
-        win_gotoid(state.winid)
+        noautocmd win_gotoid(state.winid)
     endif
+    CleanDiffJumpList(state.winid)
 enddef
 
 export def ToggleOrOpenDiff()
@@ -809,13 +847,46 @@ export def GoToFile()
     endif
 
     var target_path = state.cwd .. '/' .. entry.file
-    state.saved_lnum = line('.')
     state.is_hidden = true
     StopCursorTimer(state)
     StopStatusJobs(key)
-    CloseDiffWindows(state)
+    CloseDiff(key)
+    CleanDiffJumpList(state.winid)
     normal! m'
     execute 'edit ' .. fnameescape(target_path)
+enddef
+
+def JumpHistory(direction: number, count: number = 1)
+    CleanDiffJumpList(win_getid())
+    var orig_bufnr = bufnr('%')
+    var orig_pos = getcurpos()
+    var key = direction < 0 ? "\<C-o>" : "\<C-i>"
+    silent! execute 'normal! ' .. string(count) .. key
+
+    var steps = 0
+    while IsStatusDiffBuffer(bufnr('%')) && steps < 100
+        var prev_buf = bufnr('%')
+        var prev_lnum = line('.')
+        silent! execute 'normal! 1' .. key
+        if bufnr('%') == prev_buf && line('.') == prev_lnum
+            break
+        endif
+        steps += 1
+    endwhile
+
+    if IsStatusDiffBuffer(bufnr('%')) && orig_bufnr > 0 && bufexists(orig_bufnr)
+        execute 'keepjumps buffer ' .. orig_bufnr
+        setpos('.', orig_pos)
+    endif
+    CleanDiffJumpList(win_getid())
+enddef
+
+export def JumpBack(count: number = 1)
+    JumpHistory(-1, count)
+enddef
+
+export def JumpForward(count: number = 1)
+    JumpHistory(1, count)
 enddef
 
 export def OnBufHidden(abuf: number = -1)
@@ -823,13 +894,10 @@ export def OnBufHidden(abuf: number = -1)
     var key: string = view.GetKey(view_id)
     if has_key(views, key)
         var state = views[key]
-        if state.winid > 0 && win_id2win(state.winid) > 0 && get(state, 'saved_lnum', 0) <= 0
-            state.saved_lnum = getcurpos(state.winid)[1]
-        endif
         state.is_hidden = true
         StopCursorTimer(state)
         StopStatusJobs(key)
-        CloseDiffWindows(state)
+        CloseDiff(key)
     endif
 enddef
 
@@ -840,6 +908,7 @@ export def OnBufEnter(abuf: number = -1)
         return
     endif
     var state = views[key]
+    CleanDiffJumpList(win_getid())
     if !get(state, 'initialized', false) || !get(state, 'is_hidden', false)
         return
     endif

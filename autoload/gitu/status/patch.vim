@@ -128,25 +128,28 @@ export def Open3Way(repo_root: string, rel_file_path: string, status_winid: numb
         setwinvar(status_winid, '&winfixheight', 1)
     endif
 
-    botright new
+    keepjumps botright new
     var head_winid: number = win_getid()
     var head_bufnr: number = buffer.InitCurrentScratch('', '[GitU:HEAD] ' .. rel_file_path)
     buffer.SetLines(head_bufnr, head_lines)
     setlocal nomodifiable
+    clearjumps
     diffthis
     nnoremap <buffer> <silent> q <ScriptCmd>Close3Way()<CR>
     nnoremap <buffer> <silent> <C-j> <ScriptCmd>MoveView(1, v:count1)<CR>
     nnoremap <buffer> <silent> <C-k> <ScriptCmd>MoveView(-1, v:count1)<CR>
 
-    rightbelow vnew
+    keepjumps rightbelow vnew
     var stage_winid: number = win_getid()
     var stage_bufnr: number = bufnr('%')
     setlocal buftype=acwrite
     setlocal bufhidden=wipe
     setlocal noswapfile
-    silent! execute 'noautocmd file ' .. fnameescape('[GitU:STAGE] ' .. rel_file_path)
+    setlocal nobuflisted
+    silent! execute 'keepjumps keepalt noautocmd file ' .. fnameescape('[GitU:STAGE] ' .. rel_file_path)
     setbufline(stage_bufnr, 1, stage_lines)
     setlocal nomodified
+    clearjumps
     diffthis
 
     b:gitu_repo_root = repo_root
@@ -162,9 +165,9 @@ export def Open3Way(repo_root: string, rel_file_path: string, status_winid: numb
     nnoremap <buffer> <silent> <C-j> <ScriptCmd>MoveView(1, v:count1)<CR>
     nnoremap <buffer> <silent> <C-k> <ScriptCmd>MoveView(-1, v:count1)<CR>
 
-    rightbelow vnew
+    keepjumps rightbelow vnew
     var current_winid: number = win_getid()
-    execute 'edit ' .. fnameescape(full_path)
+    execute 'keepjumps keepalt edit ' .. fnameescape(full_path)
     diffthis
     nnoremap <buffer> <silent> q <ScriptCmd>Close3Way()<CR>
     nnoremap <buffer> <silent> <C-j> <ScriptCmd>MoveView(1, v:count1)<CR>

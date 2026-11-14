@@ -17,7 +17,7 @@ def WaitFor(Condition: func(): bool, timeout: number = 3000): bool
 enddef
 
 def TestStatusDiffOnDdAndCursorMove()
-    var temp_dir = fnamemodify('./tmp/test_status_diff_' .. localtime(), ':p')
+    var temp_dir = '/tmp/test_status_diff_' .. localtime()
     mkdir(temp_dir, 'p')
 
     system('git -C ' .. fnameescape(temp_dir) .. ' init -b main')
@@ -123,7 +123,7 @@ def TestStatusDiffOnDdAndCursorMove()
 enddef
 
 def TestStatusLargeDiffDelay()
-    var temp_dir = fnamemodify('./tmp/test_status_large_' .. localtime(), ':p')
+    var temp_dir = '/tmp/test_status_large_' .. localtime()
     mkdir(temp_dir, 'p')
 
     system('git -C ' .. fnameescape(temp_dir) .. ' init -b main')
@@ -200,7 +200,7 @@ def TestStatusLargeDiffDelay()
 enddef
 
 def TestStatusGoToFileAndJumpBack()
-    var temp_dir = fnamemodify('./tmp/test_status_gf_' .. localtime(), ':p')
+    var temp_dir = '/tmp/test_status_gf_' .. localtime()
     mkdir(temp_dir, 'p')
 
     system('git -C ' .. fnameescape(temp_dir) .. ' init -b main')
@@ -255,8 +255,38 @@ def TestStatusGoToFileAndJumpBack()
         assert_true(back_ok, 'C-o should return to status screen')
         assert_equal(target_l, line('.'), 'Cursor should return to target.txt line')
 
-        var reopened_ok = WaitFor((): bool => status.GetState().diff_left_winid > 0, 3000)
-        assert_true(reopened_ok, 'Diff windows should reopen after returning to status when diff_enabled was true')
+        sleep 100m
+        assert_equal(-1, status.GetState().diff_left_winid, 'Diff windows should remain closed when returning to status via C-o')
+
+        # Test C-i jumps forward back to target.txt, and C-o returns to status ignoring any diff buffers
+        status.JumpForward(1)
+        assert_equal('target.txt', expand('%:t'), 'C-i should jump forward to target.txt')
+
+        feedkeys("\<C-o>", 'xt')
+        back_ok = WaitFor((): bool => expand('%:t') =~ '^\[GitU:Status', 3000)
+        assert_true(back_ok, 'C-o should return to status screen again')
+
+        # Even if a diff buffer was opened or in jumplist, C-o and C-i must ignore diff buffers
+        status.ToggleOrOpenDiff()
+        assert_true(status.GetState().diff_left_winid > 0)
+        status.ToggleOrOpenDiff()
+        assert_equal(-1, status.GetState().diff_left_winid)
+
+        # Simulate a stale diff buffer in jumplist before jumping forward to target.txt and back
+        var status_bufnr = bufnr('%')
+        normal! m'
+        enew
+        buffer.InitCurrentScratch('gitu-diff', '[GitU:Diff: stale.txt (unstaged)]', 'hide')
+        normal! m'
+        execute 'buffer ' .. status_bufnr
+        cursor(target_l, 1)
+
+        status.JumpBack(1)
+        assert_false(status.IsStatusDiffBuffer(bufnr('%')), 'C-o must skip stale diff buffers in jumplist')
+        assert_match('^\[GitU:Status', bufname('%'), 'C-o should remain on status buffer after skipping diff buffer')
+
+        status.JumpForward(1)
+        assert_false(status.IsStatusDiffBuffer(bufnr('%')), 'C-i must skip stale diff buffers in jumplist')
 
         status.Close()
     finally

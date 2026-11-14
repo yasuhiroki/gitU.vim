@@ -7,7 +7,7 @@ export def InitCurrentScratch(filetype: string, buf_name: string = '', bufhidden
     setlocal nobuflisted
     setlocal nomodifiable
     if buf_name != ''
-        silent! execute 'noautocmd file ' .. fnameescape(buf_name)
+        silent! execute 'keepjumps keepalt noautocmd file ' .. fnameescape(buf_name)
     endif
     if filetype != ''
         execute 'setlocal filetype=' .. filetype
@@ -19,9 +19,13 @@ export def SetLines(bufnr: number, lines: list<string>)
     if bufnr <= 0 || !bufexists(bufnr)
         return
     endif
+    var target_lines = empty(lines) ? [''] : lines
     setbufvar(bufnr, '&modifiable', 1)
-    silent! deletebufline(bufnr, 1, '$')
-    setbufline(bufnr, 1, empty(lines) ? [''] : lines)
+    setbufline(bufnr, 1, target_lines)
+    var old_count = len(getbufline(bufnr, 1, '$'))
+    if old_count > len(target_lines)
+        silent! deletebufline(bufnr, len(target_lines) + 1, '$')
+    endif
     setbufvar(bufnr, '&modifiable', 0)
 enddef
 

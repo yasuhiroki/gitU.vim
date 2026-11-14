@@ -30,6 +30,8 @@ nnoremap <buffer> <silent> cc <ScriptCmd>commit.Open()<CR>
 nnoremap <buffer> <silent> gf <ScriptCmd>status.GoToFile()<CR>
 nnoremap <buffer> <silent> o <ScriptCmd>status.GoToFile()<CR>
 nnoremap <buffer> <silent> <CR> <ScriptCmd>status.GoToFile()<CR>
+nnoremap <buffer> <silent> <C-o> <ScriptCmd>status.JumpBack(v:count1)<CR>
+nnoremap <buffer> <silent> <C-i> <ScriptCmd>status.JumpForward(v:count1)<CR>
 nnoremap <buffer> <silent> <C-j> <ScriptCmd>status.MoveSubView(1, v:count1)<CR>
 nnoremap <buffer> <silent> <C-k> <ScriptCmd>status.MoveSubView(-1, v:count1)<CR>
 nnoremap <buffer> <silent> <Tab> <ScriptCmd>status.CycleFocus(1)<CR>

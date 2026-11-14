@@ -187,6 +187,14 @@ def TestStatusKeymaps()
     assert_false(empty(map_cr))
     assert_match('status\.GoToFile()', map_cr.rhs)
 
+    var map_co = maparg('<C-o>', 'n', false, true)
+    assert_false(empty(map_co))
+    assert_match('status\.JumpBack(v:count1)', map_co.rhs)
+
+    var map_ci = maparg('<C-i>', 'n', false, true)
+    assert_false(empty(map_ci))
+    assert_match('status\.JumpForward(v:count1)', map_ci.rhs)
+
     var map_q = maparg('q', 'n', false, true)
     assert_false(empty(map_q))
     assert_match('status\.Close()', map_q.rhs)
