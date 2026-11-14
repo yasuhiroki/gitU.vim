@@ -93,7 +93,6 @@ export def MoveView(direction: number, count: number = 1)
     var scroll_char = direction > 0 ? "\<C-e>" : "\<C-y>"
     var feed_cmd = printf('call feedkeys("%d%s", "xt")', count, scroll_char)
     win_execute(current_session.stage_winid, feed_cmd)
-    win_execute(current_session.stage_winid, 'syncbind')
     redraw
 enddef
 

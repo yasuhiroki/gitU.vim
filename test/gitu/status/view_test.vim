@@ -98,6 +98,35 @@ def TestStatusDiffOnDdAndCursorMove()
         status.MoveSubView(-1, 2)
         assert_equal(init_top + 3, getwininfo(state.diff_left_winid)[0].topline)
 
+        # Test diff alignment across filler lines when scrolling 1 line at a time with MoveSubView
+        var left_hunk_lines: list<string> = []
+        for i in range(1, 30)
+            add(left_hunk_lines, 'line ' .. i)
+        endfor
+        var right_hunk_lines: list<string> = ['line 1', 'line 2', 'line 3', 'add 1', 'add 2', 'add 3', 'add 4', 'add 5']
+        for i in range(4, 30)
+            add(right_hunk_lines, 'line ' .. i)
+        endfor
+        buffer.SetLines(state.diff_left_bufnr, left_hunk_lines)
+        buffer.SetLines(state.diff_right_bufnr, right_hunk_lines)
+        win_execute(state.diff_left_winid, 'diffupdate')
+        win_execute(state.diff_left_winid, 'normal! ggzt')
+        win_execute(state.diff_right_winid, 'normal! ggzt')
+        redraw
+
+        for _ in range(1, 8)
+            status.MoveSubView(1, 1)
+        endfor
+        var left_top = getwininfo(state.diff_left_winid)[0].topline
+        var right_top = getwininfo(state.diff_right_winid)[0].topline
+        assert_true(left_top >= 4, 'Left diff should have scrolled past the hunk')
+        assert_equal(left_top + 5, right_top, 'Right diff topline should be offset by the 5 added lines to stay aligned with left diff')
+        assert_equal(
+            getbufline(state.diff_left_bufnr, left_top)[0],
+            getbufline(state.diff_right_bufnr, right_top)[0],
+            'Top visible line content of left and right diff must match after scrolling past hunk'
+        )
+
         # Test CycleFocus
         status.CycleFocus(1)
         assert_equal(state.diff_left_winid, win_getid(), 'CycleFocus should move to left diff')

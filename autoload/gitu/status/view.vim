@@ -734,12 +734,25 @@ export def MoveSubView(direction: number, count: number = 1)
     endif
     var state = views[key]
     var left_winid: number = get(state, 'diff_left_winid', -1)
+    var right_winid: number = get(state, 'diff_right_winid', -1)
 
+    var target_winid = -1
     if left_winid > 0 && win_id2win(left_winid) > 0
+        target_winid = left_winid
+        if right_winid > 0 && win_id2win(right_winid) > 0
+            if (line('$', left_winid) <= 1 && line('$', right_winid) > 1)
+                || (direction > 0 && line('w0', left_winid) >= line('$', left_winid) && line('w0', right_winid) < line('$', right_winid))
+                target_winid = right_winid
+            endif
+        endif
+    elseif right_winid > 0 && win_id2win(right_winid) > 0
+        target_winid = right_winid
+    endif
+
+    if target_winid > 0
         var scroll_char = direction > 0 ? "\<C-e>" : "\<C-y>"
         var feed_cmd = printf('call feedkeys("%d%s", "xt")', count, scroll_char)
-        win_execute(left_winid, feed_cmd)
-        win_execute(left_winid, 'syncbind')
+        win_execute(target_winid, feed_cmd)
         redraw
     endif
 enddef
